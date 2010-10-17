@@ -23,7 +23,7 @@
 #
 PKG="slit"
 NAME="Solaris Legacy iSCSI Target"
-ARCH="ISA"
+ARCH="i386"
 CATEGORY="system"
 BASEDIR=/
 CLASSES="manifest none rbac"
