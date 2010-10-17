@@ -1956,14 +1956,8 @@ spc_pr_read(t10_cmd_t *cmd)
 	for (i = 0; i < buf->numkeys; i++) {
 		assert(klist[i].rectype == PGRDISKKEY);
 
-		/*
-		 * Was the key previously read, if not restore it
-		 */
-		key = spc_pr_key_find(pgr, 0, T10_PGR_INAME(cmd),
-		    T10_PGR_TNAME(cmd));
-		if (key == NULL)
-			key = spc_pr_key_alloc(pgr, klist[i].key,
-			    klist[i].i_name, klist[i].transportID);
+		key = spc_pr_key_alloc(pgr, klist[i].key,
+		    klist[i].i_name, klist[i].transportID);
 		assert(key);
 	}
 
@@ -1974,15 +1968,9 @@ spc_pr_read(t10_cmd_t *cmd)
 	for (i = 0; i < buf->numrsrv; i++) {
 		assert(rlist[i].rectype == PGRDISKRSRV);
 
-		/*
-		 * Was the reservation previously read, if not restore it
-		 */
-		rsrv = spc_pr_rsrv_find(pgr, 0, T10_PGR_INAME(cmd),
-		    T10_PGR_TNAME(cmd));
-		if (rsrv == NULL)
-			rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
-			    rlist[i].i_name, rlist[i].transportID,
-			    rlist[i].scope, rlist[i].type);
+		rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
+		    rlist[i].i_name, rlist[i].transportID,
+		    rlist[i].scope, rlist[i].type);
 		assert(rsrv);
 	}
 
