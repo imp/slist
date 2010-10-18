@@ -52,3 +52,5 @@ P SUNWcslr	Core Solaris Libraries (Root)
 P SUNWlxml	The XML library
 P SUNWzfsr	SUNWzfsr ZFS (Root)
 P SUNWlibsasl	SASL v2
+I SUNWiscsitgtr	Sun iSCSI Target (Root)
+I SUNWiscsitgtu	Sun iSCSI Target (Usr)
