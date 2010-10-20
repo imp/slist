@@ -10,3 +10,8 @@ all:
 	cd iscsitadm; $(MAKE) all
 	cd iscsitgtd; $(MAKE) all
 	cd pkg; pkgmk -o -f slit.prototype -d .
+
+clean:
+	cd libiscsitgt; $(MAKE) clean
+	cd iscsitadm; $(MAKE) clean
+	cd iscsitgtd; $(MAKE) clean
