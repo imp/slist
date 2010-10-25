@@ -221,7 +221,7 @@ optionRules_t optionRules[] = {
 	{TPGT, MODIFY, "i", B_TRUE, NULL},
 	{TPGT, DELETE, "Ai", B_TRUE, NULL},
 	{TPGT, LIST,   "v", B_FALSE, NULL},
-	{ADMIN, MODIFY, "deHCRrPSsf", B_TRUE, NULL},
+	{ADMIN, MODIFY, "dHCRrPSsef", B_TRUE, NULL},
 	{STATS, SHOW, "IN", B_FALSE, NULL},
 };
 
