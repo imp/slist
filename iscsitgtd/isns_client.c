@@ -739,7 +739,7 @@ isns_init(target_queue_t *q)
 		(void) gethostname(isns_args.entity, MAXHOSTNAMELEN);
 	}
 
-	if ((strlen(isns_args.entity) > 0) ||
+	if ((strlen(isns_args.entity) == 0) ||
 	    (get_ip_addr(isns_args.entity, &eid_ip) < 0)) {
 		syslog(LOG_ERR, "isns_init: failed to get host name or host ip"
 		    " address for ENTITY properties");
