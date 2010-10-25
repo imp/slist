@@ -638,7 +638,8 @@ modify_admin(tgt_node_t *x)
 			}
 			(void) pthread_rwlock_unlock(&targ_config_mutex);
 			if (0 == strcmp(ap->name, XML_ELEMENT_ISNS_ACCESS) ||
-			    0 == strcmp(ap->name, XML_ELEMENT_ISNS_SERV)) {
+			    0 == strcmp(ap->name, XML_ELEMENT_ISNS_SERV) ||
+			    0 == strcmp(ap->name, XML_ELEMENT_ISNS_ENTITY)) {
 				update_isns = True;
 			}
 			free(prop);

@@ -82,6 +82,7 @@ typedef enum {
 #define	XML_ELEMENT_RAD_SECRET	"radius-secret"
 #define	XML_ELEMENT_DELETE_RAD_SECRET	"delete-radius-secret"
 #define	XML_ELEMENT_ISNS_ACCESS	"isns-access"
+#define	XML_ELEMENT_ISNS_ENTITY	"isns-entity"
 #define	XML_ELEMENT_ISNS_SERV	"isns-server"
 #define	XML_ELEMENT_ISNS_SERVER_STATUS	"isns-server-status"
 #define	XML_ELEMENT_FAST	"fast-write-ack"

@@ -718,7 +718,7 @@ isns_populate_and_update_server_info(Boolean_t update) {
 int
 isns_init(target_queue_t *q)
 {
-	char	*entity;
+	char	*entity = NULL;
 
 	if (q != NULL)
 		mgmtq = q;
@@ -727,16 +727,23 @@ isns_init(target_queue_t *q)
 		return (0);
 
 	/*
-	 * get local hostname for entity usage, alternatively environment
-	 * variable ISCSITGT_ISNS_ENTITY overrides the default hostname as
-	 * and entity name
+	 * get entity from the configuration if it set, alternatively
+	 * get local hostname for entity usage. If environment variable
+	 * ISCSITGT_ISNS_ENTITY is set it overrides all the other means
+	 * of entity definition
 	 */
-	isns_args.entity[0] = 0;
-	entity = getenv(ISCSITGT_ISNS_ENTITY);
-	if (entity != NULL) {
-		(void) strlcpy(isns_args.entity, entity, MAXHOSTNAMELEN);
+
+	if (tgt_find_value_str(main_config, XML_ELEMENT_ISNS_ENTITY, &entity)) {
+		(void) strlcpy(isns_args.entity, entity, MAXHOSTNAMELEN + 1);
+		free(entity);
 	} else {
 		(void) gethostname(isns_args.entity, MAXHOSTNAMELEN);
+	}
+
+	/* Try environment variable - it overrides everything else */
+	entity = getenv(ISCSITGT_ISNS_ENTITY);
+	if (entity != NULL) {
+		(void) strlcpy(isns_args.entity, entity, MAXHOSTNAMELEN + 1);
 	}
 
 	if ((strlen(isns_args.entity) == 0) ||

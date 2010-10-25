@@ -121,6 +121,7 @@ optionTbl_t longOptions[] = {
 	{"radius-server", required_arg, 'r', "hostname[:port]"},
 	{"radius-secret", no_arg, 'P', NULL},
 	{"isns-access", required_arg, 'S', "enable/disable"},
+	{"isns-entity", required_arg, 'e', "hostname"},
 	{"isns-server", required_arg, 's', "hostname[:port]"},
 	{"fast-write-ack", required_arg, 'f', "enable/disable"},
 	{"verbose", no_arg, 'v', NULL},
@@ -850,6 +851,17 @@ modifyAdmin(int operandLen, char *operand[], cmdOptions_t *options)
 				tgt_buf_add(&first_str, XML_ELEMENT_ISNS_SERV,
 				    optionList->optarg);
 				break;
+			case 'e': /* iSNS entity */
+				if (strlen(optionList->optarg) >
+				    MAXHOSTNAMELEN) {
+					(void) fprintf(stderr, "%s: %s\n",
+					    cmdName,
+					    gettext("option too long"));
+					return (1);
+				}
+				tgt_buf_add(&first_str, XML_ELEMENT_ISNS_ENTITY,
+				    optionList->optarg);
+				break;
 			case 'f': /* fast write back */
 				if (strcmp(optionList->optarg,
 				    OPT_ENABLE) == 0) {
@@ -1426,6 +1438,10 @@ showAdmin(int operandLen, char *operand[], cmdOptions_t *options)
 			(void) printf("%s\n", gettext("Disabled"));
 	} else
 		(void) printf("%s\n", gettext("Not set"));
+
+	n2 = tgt_node_next_child(n1, XML_ELEMENT_ISNS_ENTITY, NULL);
+	(void) printf("%s%s: %s\n", dospace(1), gettext("iSNS Entity"),
+	    n2 ? n2->x_value : gettext("Not set"));
 
 	n2 = tgt_node_next_child(n1, XML_ELEMENT_ISNS_SERV, NULL);
 	(void) printf("%s%s: %s\n", dospace(1), gettext("iSNS Server"),
