@@ -60,6 +60,8 @@ typedef struct {
 
 extern target_queue_t	*mgmtq;
 
+#define	ISCSITGT_ISNS_ENTITY	"ISCSITGT_ISNS_ENTITY"
+
 /*
  * Global
  * Parameters for ESI/SCN processing.
@@ -716,14 +718,28 @@ isns_populate_and_update_server_info(Boolean_t update) {
 int
 isns_init(target_queue_t *q)
 {
+	char	*entity;
+
 	if (q != NULL)
 		mgmtq = q;
 
 	if (isns_enabled() == False)
 		return (0);
 
-	/* get local hostname for entity usage */
-	if ((gethostname(isns_args.entity, MAXHOSTNAMELEN) < 0) ||
+	/*
+	 * get local hostname for entity usage, alternatively environment
+	 * variable ISCSITGT_ISNS_ENTITY overrides the default hostname as
+	 * and entity name
+	 */
+	isns_args.entity[0] = 0;
+	entity = getenv(ISCSITGT_ISNS_ENTITY);
+	if (entity != NULL) {
+		(void) strlcpy(isns_args.entity, entity, MAXHOSTNAMELEN);
+	} else {
+		(void) gethostname(isns_args.entity, MAXHOSTNAMELEN);
+	}
+
+	if ((strlen(isns_args.entity) > 0) ||
 	    (get_ip_addr(isns_args.entity, &eid_ip) < 0)) {
 		syslog(LOG_ERR, "isns_init: failed to get host name or host ip"
 		    " address for ENTITY properties");
