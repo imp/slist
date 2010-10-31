@@ -584,6 +584,7 @@ isns_send(int so, isns_pdu_t *pdu)
 
 	assert(pdu != NULL);
 
+	syslog(LOG_DEBUG, "isns_send(%d)", BE_16(pdu->func_id));
 	len = ISNSP_HEADER_SIZE + ntohs(pdu->payload_len);
 	if (send(so, pdu, len, 0) == -1) {
 		syslog(LOG_ALERT, "isns_send failure");
@@ -697,6 +698,8 @@ isns_recv(int so, isns_rsp_t **pdu)
 	rsp = (isns_rsp_t *)*pdu;
 	rsp->pdu_len = htons(total_pdu_len);
 	ntoh_isns_hdr((isns_hdr_t *)rsp);
+
+	syslog(LOG_DEBUG, "isns_recv(%d)", rsp->func_id);
 
 	return (0);
 }
