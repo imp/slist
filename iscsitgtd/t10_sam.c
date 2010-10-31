@@ -456,7 +456,7 @@ t10_handle_destroy(t10_targ_handle_t tp, Boolean_t wait)
  * | LU setup and we've run out of resources like not having enough file
  * | descriptors to open the backing store. If the cmdp is NULL, then there's
  * | not even enough memory to create a command buffer and the transport
- * | should shutdown it's connection a cleanly as possible.
+ * | should shutdown it's connection as cleanly as possible.
  * []----
  */
 Boolean_t

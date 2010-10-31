@@ -60,12 +60,14 @@
  * External declarations
  */
 void sbc_cmd(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len);
+void sbc_cmd_reserved(t10_cmd_t *, uint8_t *, size_t);
 void spc_cmd_reserve6(t10_cmd_t *, uint8_t *, size_t);
 void spc_cmd_release6(t10_cmd_t *, uint8_t *, size_t);
 void spc_cmd_pr_in(t10_cmd_t *, uint8_t *, size_t);
 void spc_cmd_pr_out(t10_cmd_t *, uint8_t *, size_t);
 void spc_cmd_pr_out_data(t10_cmd_t *, emul_handle_t, size_t, char *, size_t);
 void spc_pr_read(t10_cmd_t *);
+void spc_pr_read_itl(t10_lu_impl_t *);
 Boolean_t spc_pgr_check(t10_cmd_t *, uint8_t *);
 Boolean_t spc_npr_check(t10_cmd_t *, uint8_t *);
 
@@ -178,7 +180,9 @@ sbc_per_init(t10_lu_impl_t *itl)
 
 	if (d->d_state == lu_online) {
 		itl->l_cmd	= sbc_cmd;
-		itl->l_pgr_read = False;	/* Look for PGR data */
+		/* Look for PGR data */
+		spc_pr_read_itl(itl);
+		itl->l_pgr_read = True;
 	}
 	else
 		itl->l_cmd	= spc_cmd_offline;
@@ -209,15 +213,23 @@ sbc_cmd(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len)
 	if (cmd->c_lu->l_pgr_read == False) {
 		spc_pr_read(cmd);
 		cmd->c_lu->l_pgr_read = True;
-	}
+		/*
+		 * And now route the command through the sbc_cmd_reserved()
+		 * just in case. It will handle the reservation (if any)
+		 * correctly.
+		 */
+		sbc_cmd_reserved(cmd, cdb, cdb_len);
+	} else {
 
-	e = &cmd->c_lu->l_cmd_table[cdb[0]];
+		e = &cmd->c_lu->l_cmd_table[cdb[0]];
 #ifdef FULL_DEBUG
-	queue_prt(mgmtq, Q_STE_IO, "SBC%x  LUN%d Cmd %s id=%p\n",
-	    cmd->c_lu->l_targ->s_targ_num, cmd->c_lu->l_common->l_num,
-	    e->cmd_name == NULL ? "(no name)" : e->cmd_name, cmd->c_trans_id);
+		queue_prt(mgmtq, Q_STE_IO, "SBC%x  LUN%d Cmd %s id=%p\n",
+		    cmd->c_lu->l_targ->s_targ_num, cmd->c_lu->l_common->l_num,
+		    e->cmd_name == NULL ? "(no name)" : e->cmd_name,
+		    cmd->c_trans_id);
 #endif
-	(*e->cmd_start)(cmd, cdb, cdb_len);
+		(*e->cmd_start)(cmd, cdb, cdb_len);
+	}
 }
 
 /*

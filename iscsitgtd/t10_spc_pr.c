@@ -39,6 +39,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <assert.h>
+#include <syslog.h>
 
 #include <sys/scsi/generic/sense.h>
 #include <sys/scsi/generic/status.h>
@@ -1894,7 +1895,7 @@ spc_pr_read(t10_cmd_t *cmd)
 	t10_lu_impl_t		*lu;
 	int			i, pfd;
 	Boolean_t		status = False;
-	char			*c, path[MAXPATHLEN] = {0};
+	char			*c, *guid, path[MAXPATHLEN] = {0};
 
 	/*
 	 * Open the PERSISTENCE file specification if one exists
@@ -1908,12 +1909,18 @@ spc_pr_read(t10_cmd_t *cmd)
 			    pgr_basedir, &c[sizeof (ZVOL_PATH) - 1],
 			    PERSISTENCEBASE, cmd->c_lu->l_common->l_num);
 		} else {
-			(void) snprintf(path, MAXPATHLEN, "%s/%s/%s%d",
-			    target_basedir, cmd->c_lu->l_targ->s_targ_base,
-			    PERSISTENCEBASE, cmd->c_lu->l_common->l_num);
+			if (tgt_find_value_str(cmd->c_lu->l_common->l_root,
+			    XML_ELEMENT_GUID, &guid) == True) {
+				(void) snprintf(path, MAXPATHLEN, "%s/%s%s",
+				    target_basedir, PERSISTENCEBASE, guid);
+				free(guid);
+			}
 		}
 		free(c);
 	}
+
+	syslog(LOG_DEBUG, "Going to load PGR data from %s", path);
+
 	if ((pfd = open(path, O_RDONLY)) >= 0) {
 		struct stat pstat;
 		if ((fstat(pfd, &pstat)) == 0)
@@ -1949,6 +1956,10 @@ spc_pr_read(t10_cmd_t *cmd)
 	assert(buf->magic == PGRMAGIC);
 	assert(buf->revision == SPC_PGR_PERSIST_DATA_REVISION);
 
+	syslog(LOG_DEBUG, "Valid PGR data loaded with %d keys and %d "
+	    "reservations (generation %u)", buf->numkeys, buf->numrsrv,
+	    buf->generation);
+
 	/*
 	 * Get the PGR keys
 	 */
@@ -1956,8 +1967,20 @@ spc_pr_read(t10_cmd_t *cmd)
 	for (i = 0; i < buf->numkeys; i++) {
 		assert(klist[i].rectype == PGRDISKKEY);
 
-		key = spc_pr_key_alloc(pgr, klist[i].key,
-		    klist[i].i_name, klist[i].transportID);
+		/*
+		 * Was the key previously read, if not restore it
+		 */
+		syslog(LOG_DEBUG, "Loading key %llx for initiator %s xport %s",
+		    klist[i].key, klist[i].i_name, klist[i].transportID);
+
+		key = spc_pr_key_find(pgr, 0, T10_PGR_INAME(cmd),
+		    T10_PGR_TNAME(cmd));
+		if (key == NULL)
+			syslog(LOG_DEBUG, "No existing key for "
+			    "initiator %s transport %s; allocating new one",
+			    T10_PGR_INAME(cmd), T10_PGR_TNAME(cmd));
+			key = spc_pr_key_alloc(pgr, klist[i].key,
+			    klist[i].i_name, klist[i].transportID);
 		assert(key);
 	}
 
@@ -1968,9 +1991,23 @@ spc_pr_read(t10_cmd_t *cmd)
 	for (i = 0; i < buf->numrsrv; i++) {
 		assert(rlist[i].rectype == PGRDISKRSRV);
 
-		rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
-		    rlist[i].i_name, rlist[i].transportID,
-		    rlist[i].scope, rlist[i].type);
+		/*
+		 * Was the reservation previously read, if not restore it
+		 */
+		syslog(LOG_DEBUG, "Loading reservation %llx (scope %hhd, "
+		    "type %hhd) initiator %s xport %s", rlist[i].key,
+		    rlist[i].scope, rlist[i].type, rlist[i].i_name,
+		    rlist[i].transportID);
+
+		rsrv = spc_pr_rsrv_find(pgr, 0, T10_PGR_INAME(cmd),
+		    T10_PGR_TNAME(cmd));
+		if (rsrv == NULL)
+			syslog(LOG_DEBUG, "No existing reservation for "
+			    "initiator %s transport %s; allocating new one",
+			    T10_PGR_INAME(cmd), T10_PGR_TNAME(cmd));
+			rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
+			    rlist[i].i_name, rlist[i].transportID,
+			    rlist[i].scope, rlist[i].type);
 		assert(rsrv);
 	}
 
@@ -1999,6 +2036,165 @@ spc_pr_read(t10_cmd_t *cmd)
 
 /*
  * []----
+ * | spc_pr_read_itl -
+ * |	Read in pgr keys and reservations for this device from backend storage.
+ * |	At least the local pgr write lock must be held.
+ * []----
+ */
+void
+spc_pr_read_itl(t10_lu_impl_t *itl)
+{
+	disk_params_t		*p = itl->l_common->l_dtype_params;
+	sbc_reserve_t		*res = &p->d_sbc_reserve;
+	scsi3_pgr_t		*pgr = &res->res_scsi_3_pgr;
+	spc_pr_key_t		*key;
+	spc_pr_rsrv_t		*rsrv;
+	spc_pr_diskkey_t	*klist;
+	spc_pr_diskrsrv_t	*rlist;
+	spc_pr_persist_disk_t	*buf = NULL;
+	t10_lu_impl_t		*lu;
+	int			i, pfd;
+	Boolean_t		status = False;
+	char			*c, *guid, path[MAXPATHLEN] = {0};
+
+	/*
+	 * Open the PERSISTENCE file specification if one exists
+	 * taking into account the alternate location if a ZVOL
+	 */
+	if (tgt_find_value_str(itl->l_common->l_root, XML_ELEMENT_BACK,
+	    &c) == True) {
+		if (((pgr_basedir != NULL) && (strlen(pgr_basedir) != 0)) &&
+		    (strncmp(ZVOL_PATH, c, sizeof (ZVOL_PATH) - 1) == 0)) {
+			(void) snprintf(path, MAXPATHLEN, "%s/%s-%s%d",
+			    pgr_basedir, &c[sizeof (ZVOL_PATH) - 1],
+			    PERSISTENCEBASE, itl->l_common->l_num);
+		} else {
+			if (tgt_find_value_str(itl->l_common->l_root,
+			    XML_ELEMENT_GUID, &guid) == True) {
+				(void) snprintf(path, MAXPATHLEN, "%s/%s%s",
+				    target_basedir, PERSISTENCEBASE, guid);
+				free(guid);
+			}
+		}
+		free(c);
+	}
+
+	syslog(LOG_DEBUG, "Going to load (ITL) PGR data from %s", path);
+
+	if ((pfd = open(path, O_RDONLY)) >= 0) {
+		struct stat pstat;
+		if ((fstat(pfd, &pstat)) == 0)
+			if (pstat.st_size > 0)
+				if (buf  = malloc(pstat.st_size))
+					if (read(pfd, buf, pstat.st_size) ==
+					    pstat.st_size)
+						status = True;
+	}
+
+	/*
+	 * Clean up on no persistence file found
+	 */
+	if (status == False) {
+		if (pfd >= 0)
+			(void) close(pfd);
+		if (buf)
+			free(buf);
+		return;
+	}
+
+	/*
+	 * If this is the first time using the persistence data,
+	 * initialize the reservation and resource key queues
+	 */
+	if (pgr->pgr_rsrvlist.lnk_fwd == NULL) {
+		(void) spc_pr_initialize(pgr);
+	}
+
+	/*
+	 * Perform some vailidation on what we are looking at
+	 */
+	assert(buf->magic == PGRMAGIC);
+	assert(buf->revision == SPC_PGR_PERSIST_DATA_REVISION);
+
+	syslog(LOG_DEBUG, "Valid PGR data loaded with %d keys and %d "
+	    "reservations (generation %u)", buf->numkeys, buf->numrsrv,
+	    buf->generation);
+
+	/*
+	 * Get the PGR keys
+	 */
+	klist = (spc_pr_diskkey_t *)&buf->keylist[0];
+	for (i = 0; i < buf->numkeys; i++) {
+		assert(klist[i].rectype == PGRDISKKEY);
+
+		/*
+		 * Was the key previously read, if not restore it
+		 */
+		syslog(LOG_DEBUG, "Loading key %llx for initiator %s xport %s",
+		    klist[i].key, klist[i].i_name, klist[i].transportID);
+
+		key = spc_pr_key_find(pgr, 0, itl->l_targ->s_i_name,
+		    itl->l_targ->s_targ_base);
+		if (key == NULL)
+			syslog(LOG_DEBUG, "No existing key for "
+			    "initiator %s transport %s; allocating new one",
+			    itl->l_targ->s_i_name, itl->l_targ->s_targ_base);
+			key = spc_pr_key_alloc(pgr, klist[i].key,
+			    klist[i].i_name, klist[i].transportID);
+		assert(key);
+	}
+
+	/*
+	 * Get the PGR reservations
+	 */
+	rlist = (spc_pr_diskrsrv_t *)&buf->keylist[buf->numkeys];
+	for (i = 0; i < buf->numrsrv; i++) {
+		assert(rlist[i].rectype == PGRDISKRSRV);
+
+		/*
+		 * Was the reservation previously read, if not restore it
+		 */
+		syslog(LOG_DEBUG, "Loading reservation %llx (scope %hhd, "
+		    "type %hhd) initiator %s xport %s", rlist[i].key,
+		    rlist[i].scope, rlist[i].type, rlist[i].i_name,
+		    rlist[i].transportID);
+
+		rsrv = spc_pr_rsrv_find(pgr, 0, itl->l_targ->s_i_name,
+		    itl->l_targ->s_targ_base);
+		if (rsrv == NULL)
+			syslog(LOG_DEBUG, "No existing reservation for "
+			    "initiator %s transport %s; allocating new one",
+			    itl->l_targ->s_i_name, itl->l_targ->s_targ_base);
+			rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
+			    rlist[i].i_name, rlist[i].transportID,
+			    rlist[i].scope, rlist[i].type);
+		assert(rsrv);
+	}
+
+	/*
+	 * If there was data then set the reservation type.
+	 */
+	if (pgr->pgr_numkeys > 0 || pgr->pgr_numrsrv > 0) {
+		res->res_type = RT_PGR;
+		pgr->pgr_generation = buf->generation;
+
+		/*
+		 * Set the command dispatcher according to the reservation type
+		 */
+		(void) pthread_mutex_lock(&itl->l_common->l_common_mutex);
+		lu = avl_first(&itl->l_common->l_all_open);
+		do {
+			lu->l_cmd = sbc_cmd_reserved;
+			lu = AVL_NEXT(&itl->l_common->l_all_open, lu);
+		} while (lu != NULL);
+		(void) pthread_mutex_unlock(&itl->l_common->l_common_mutex);
+	}
+
+	free(buf);
+}
+
+/*
+ * []----
  * | spc_pr_write -
  * |	Write PGR keys and reservations for this device to backend storage.
  * |	At least the local pgr write lock must be held.
@@ -2017,7 +2213,7 @@ spc_pr_write(t10_cmd_t *cmd)
 	spc_pr_persist_disk_t	*buf;
 	ssize_t			length, bufsize;
 	int			i, pfd = -1;
-	char			*c, path[MAXPATHLEN] = {0};
+	char			*c, *guid, path[MAXPATHLEN] = {0};
 	Boolean_t		status = True;
 
 	/*
@@ -2084,17 +2280,21 @@ spc_pr_write(t10_cmd_t *cmd)
 	 * Open the PERSISTENCE file specification if one exists
 	 * taking into account the alternate location if a ZVOL
 	 */
-	if (tgt_find_value_str(cmd->c_lu->l_common->l_root, XML_ELEMENT_BACK,
-	    &c) == True) {
+
+	if (tgt_find_value_str(cmd->c_lu->l_common->l_root,
+	    XML_ELEMENT_BACK, &c) == True) {
 		if (((pgr_basedir != NULL) && (strlen(pgr_basedir) != 0)) &&
 		    (strncmp(ZVOL_PATH, c, sizeof (ZVOL_PATH) - 1) == 0)) {
 			(void) snprintf(path, MAXPATHLEN, "%s/%s-%s%d",
 			    pgr_basedir, &c[sizeof (ZVOL_PATH) - 1],
 			    PERSISTENCEBASE, cmd->c_lu->l_common->l_num);
 		} else {
-			(void) snprintf(path, MAXPATHLEN, "%s/%s/%s%d",
-			    target_basedir, cmd->c_lu->l_targ->s_targ_base,
-			    PERSISTENCEBASE, cmd->c_lu->l_common->l_num);
+			if (tgt_find_value_str(cmd->c_lu->l_common->l_root,
+			    XML_ELEMENT_GUID, &guid) == True) {
+				(void) snprintf(path, MAXPATHLEN, "%s/%s%s",
+				    target_basedir, PERSISTENCEBASE, guid);
+				free(guid);
+			}
 		}
 		free(c);
 	}
