@@ -1,0 +1,5 @@
+New features added compared to iSCSI target distributed with OpenSolaris:
+
+o option to set reported iSNS entity nodename
+  iscsitadm modify admin -e nodename
+
