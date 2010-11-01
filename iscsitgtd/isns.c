@@ -482,7 +482,8 @@ isns_open(char *server)
 					}
 				} else {
 					syslog(LOG_WARNING,
-					    "Connect failed no progress");
+					    "Connect failed no progress(%d %s)",
+					    errno, strerror(errno));
 					(void) close(so);
 				}
 			}
