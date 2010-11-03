@@ -449,7 +449,16 @@ isns_open(char *server)
 			}
 
 			if (ret < 0) {
-				if (errno == EINPROGRESS) {
+				switch (errno) {
+				case 0:
+					/*
+					 * Weird, connect() return < 0, but
+					 * errno indicates no error whatsoever.
+					 * Treat it as "in progress".
+					 */
+					syslog(LOG_WARNING, "Weird, "
+					    "connect()=%d, but errno=0", ret);
+				case EINPROGRESS:
 					FD_ZERO(&rfdset);
 					FD_ZERO(&wfdset);
 					FD_ZERO(&errfdset);
@@ -480,7 +489,8 @@ isns_open(char *server)
 						else
 							(void) close(so);
 					}
-				} else {
+					break;
+				default:
 					syslog(LOG_WARNING,
 					    "Connect failed no progress(%d %s)",
 					    errno, strerror(errno));
