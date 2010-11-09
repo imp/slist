@@ -6,3 +6,4 @@ o option to set reported iSNS entity nodename
 o fix issue with iSNS connection not being established due to async connect()
   erroneously returning -1  (errno == 0)
 
+o fix persistent reservation problem after iscsitgtd restart
