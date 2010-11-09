@@ -1,5 +1,8 @@
-New features added compared to iSCSI target distributed with OpenSolaris:
+ Fixes and new features compared to iSCSI target distributed with OpenSolaris:
 
 o option to set reported iSNS entity nodename
   iscsitadm modify admin -e nodename
+
+o fix issue with iSNS connection not being established due to async connect()
+  erroneously returning -1  (errno == 0)
 
