@@ -120,6 +120,7 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 	tgt_node_t	*node		= NULL;
 	tgt_node_t	*tpgt		= NULL;
 	Boolean_t	change_made	= False;
+	Boolean_t	bs_is_file	= False;
 	int		lun		= 0;
 	int		fd;
 	uint64_t	val, new_lu_size, cur_lu_size;
@@ -236,14 +237,21 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 		}
 		free(prop);
 
-		/* ---- validate the backing store is a regular file ---- */
+		/* ---- check that backing store is a regular file ---- */
 		(void) snprintf(path, sizeof (path), "%s/%s/%s%d",
 		    target_basedir, iscsi, LUNBASE, lun);
 		if (stat(path, &st) == -1) {
 			xml_rtn_msg(&msg, ERR_STAT_BACKING_FAILED);
 			goto error;
 		}
-		if ((st.st_mode & S_IFMT) != S_IFREG) {
+		switch (st.st_mode & S_IFMT) {
+		case S_IFCHR:
+		case S_IFBLK:
+			break;
+		case S_IFREG:
+			bs_is_file = True;
+			break;
+		default:
 			xml_rtn_msg(&msg,
 			    ERR_DISK_BACKING_MUST_BE_REGULAR_FILE);
 			goto error;
@@ -261,21 +269,24 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 		/* ---- now update params file ---- */
 		(void) mgmt_param_save2scf(node, targ_name, lun);
 
-		/* ---- grow lu backing store ---- */
-		(void) snprintf(path, sizeof (path), "%s/%s/%s%d",
-		    target_basedir, iscsi, LUNBASE, lun);
-		if ((fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600)) < 0) {
-			xml_rtn_msg(&msg, ERR_LUN_NOT_FOUND);
-			goto error;
-		}
-		(void) lseek(fd, (new_lu_size * 512LL) - 512LL, 0);
-		bzero(buf, sizeof (buf));
-		if (write(fd, buf, sizeof (buf)) != sizeof (buf)) {
-			xml_rtn_msg(&msg, ERR_LUN_NOT_GROWN);
+		/* ---- grow lu backing store if it is file ---- */
+		if (bs_is_file) {
+			(void) snprintf(path, sizeof (path), "%s/%s/%s%d",
+			    target_basedir, iscsi, LUNBASE, lun);
+			fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600);
+			if (fd < 0) {
+				xml_rtn_msg(&msg, ERR_LUN_NOT_FOUND);
+				goto error;
+			}
+			(void) lseek(fd, (new_lu_size * 512LL) - 512LL, 0);
+			bzero(buf, sizeof (buf));
+			if (write(fd, buf, sizeof (buf)) != sizeof (buf)) {
+				xml_rtn_msg(&msg, ERR_LUN_NOT_GROWN);
+				(void) close(fd);
+				goto error;
+			}
 			(void) close(fd);
-			goto error;
 		}
-		(void) close(fd);
 
 		/* ---- send updates to current initiators via ASC/ASCQ ---- */
 		iscsi_capacity_change(iscsi, lun);
