@@ -2298,7 +2298,7 @@ spc_pr_write(t10_cmd_t *cmd)
 		}
 		free(c);
 	}
-	if ((pfd = open(path, O_WRONLY|O_CREAT, 0600)) >= 0) {
+	if ((pfd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0600)) >= 0) {
 		length = write(pfd, buf, bufsize);
 		(void) close(pfd);
 	} else {
