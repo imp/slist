@@ -1,9 +1,22 @@
- Fixes and new features compared to iSCSI target distributed with OpenSolaris:
+ Fixes and new features compared to iSCSI target distributed with OpenSolaris
+ ============================================================================
+
+
+Version 4
+
+o Allow changing LU capacity (size) even in case the backing store is not a
+  regular file (i.e. a block device)
+
+
+Version 3
+
+o fix persistent reservation problem after iscsitgtd restart
+
+
+Version 2
 
 o option to set reported iSNS entity nodename
   iscsitadm modify admin -e nodename
 
 o fix issue with iSNS connection not being established due to async connect()
   erroneously returning -1  (errno == 0)
-
-o fix persistent reservation problem after iscsitgtd restart
