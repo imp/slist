@@ -988,6 +988,7 @@ spc_pr_out_register(t10_cmd_t *cmd, void *data, size_t data_len)
 	uint64_t		service_key;
 	t10_lu_impl_t		*lu;
 	t10_targ_impl_t		*ti;
+	int			status = STATUS_GOOD;
 
 	/*
 	 * Validate Persistent Reserver Out parameter list
@@ -1049,7 +1050,8 @@ spc_pr_out_register(t10_cmd_t *cmd, void *data, size_t data_len)
 					 * The Initiator did not specify the
 					 * existing key. Reservation conflict.
 					 */
-					return (STATUS_RESERVATION_CONFLICT);
+					status = STATUS_RESERVATION_CONFLICT;
+					break;
 				}
 				/*
 				 * Change existing key ?
@@ -1100,7 +1102,8 @@ spc_pr_out_register(t10_cmd_t *cmd, void *data, size_t data_len)
 					 * Unregistered initiator is attempting
 					 * to modify a key.
 					 */
-					return (STATUS_RESERVATION_CONFLICT);
+					status = STATUS_RESERVATION_CONFLICT;
+					break;
 				}
 
 				key = spc_pr_key_alloc(pgr, service_key,
@@ -1113,7 +1116,8 @@ spc_pr_out_register(t10_cmd_t *cmd, void *data, size_t data_len)
 					    SPC_ASC_MEMORY_OUT_OF;
 					cmd->c_lu->l_ascq =
 					    SPC_ASCQ_RESERVATION_FAIL;
-					return (STATUS_CHECK);
+					status = STATUS_CHECK;
+					break;
 				}
 			}
 		}
@@ -1121,15 +1125,17 @@ spc_pr_out_register(t10_cmd_t *cmd, void *data, size_t data_len)
 	} while (lu != NULL);
 	(void) pthread_mutex_unlock(&cmd->c_lu->l_common->l_common_mutex);
 
-	/*
-	 * Apply the last valid APTPL bit
-	 *	SPC-3, Revision 23
-	 *	Section 5.6.4.1 Preserving persistent reservervations and
-	 *	registrations through power loss
-	 */
-	pgr->pgr_aptpl = plist->aptpl;
+	if (status == STATUS_GOOD) {
+		/*
+		 * Apply the last valid APTPL bit
+		 *	SPC-3, Revision 23
+		 *	Section 5.6.4.1 Preserving persistent reservervations
+		 *	and registrations through power loss
+		 */
+		pgr->pgr_aptpl = plist->aptpl;
+	}
 
-	return (STATUS_GOOD);
+	return (status);
 }
 
 /*
