@@ -1979,17 +1979,12 @@ spc_pr_read(t10_cmd_t *cmd)
 		syslog(LOG_DEBUG, "Loading key %llx for initiator %s xport %s",
 		    klist[i].key, klist[i].i_name, klist[i].transportID);
 
-/*
-		key = spc_pr_key_find(pgr, 0, T10_PGR_INAME(cmd),
-		    T10_PGR_TNAME(cmd));
- */
 		key = spc_pr_key_find(pgr, 0, klist[i].i_name,
 		    klist[i].transportID);
 		if (key == NULL) {
 			syslog(LOG_DEBUG, "No existing key for "
 			    "initiator %s transport %s; allocating new one",
 			    klist[i].i_name, klist[i].transportID);
-/*			    T10_PGR_INAME(cmd), T10_PGR_TNAME(cmd));*/
 			key = spc_pr_key_alloc(pgr, klist[i].key,
 			    klist[i].i_name, klist[i].transportID);
 		}
@@ -2011,17 +2006,12 @@ spc_pr_read(t10_cmd_t *cmd)
 		    rlist[i].scope, rlist[i].type, rlist[i].i_name,
 		    rlist[i].transportID);
 
-/*
-		rsrv = spc_pr_rsrv_find(pgr, 0, T10_PGR_INAME(cmd),
-		    T10_PGR_TNAME(cmd));
- */
 		rsrv = spc_pr_rsrv_find(pgr, 0, rlist[i].i_name,
 		    rlist[i].transportID);
 		if (rsrv == NULL) {
 			syslog(LOG_DEBUG, "No existing reservation for "
 			    "initiator %s transport %s; allocating new one",
 			    rlist[i].i_name, rlist[i].transportID);
-/*			    T10_PGR_INAME(cmd), T10_PGR_TNAME(cmd));*/
 			rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
 			    rlist[i].i_name, rlist[i].transportID,
 			    rlist[i].scope, rlist[i].type);
@@ -2150,17 +2140,13 @@ spc_pr_read_itl(t10_lu_impl_t *itl)
 		 */
 		syslog(LOG_DEBUG, "Loading key %llx for initiator %s xport %s",
 		    klist[i].key, klist[i].i_name, klist[i].transportID);
-/*
-		key = spc_pr_key_find(pgr, 0, itl->l_targ->s_i_name,
-		    itl->l_targ->s_targ_base);
- */
+
 		key = spc_pr_key_find(pgr, 0, klist[i].i_name,
 		    klist[i].transportID);
 		if (key == NULL) {
 			syslog(LOG_DEBUG, "No existing key for "
 			    "initiator %s transport %s; allocating new one",
 			    klist[i].i_name, klist[i].transportID);
-/*			    itl->l_targ->s_i_name, itl->l_targ->s_targ_base);*/
 			key = spc_pr_key_alloc(pgr, klist[i].key,
 			    klist[i].i_name, klist[i].transportID);
 		}
@@ -2181,17 +2167,13 @@ spc_pr_read_itl(t10_lu_impl_t *itl)
 		    "type %hhd) initiator %s xport %s", rlist[i].key,
 		    rlist[i].scope, rlist[i].type, rlist[i].i_name,
 		    rlist[i].transportID);
-/*
-		rsrv = spc_pr_rsrv_find(pgr, 0, itl->l_targ->s_i_name,
-		    itl->l_targ->s_targ_base);
- */
+
 		rsrv = spc_pr_rsrv_find(pgr, 0, rlist[i].i_name,
 		    rlist[i].transportID);
 		if (rsrv == NULL) {
 			syslog(LOG_DEBUG, "No existing reservation for "
 			    "initiator %s transport %s; allocating new one",
 			    rlist[i].i_name, rlist[i].transportID);
-/*			    itl->l_targ->s_i_name, itl->l_targ->s_targ_base);*/
 			rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
 			    rlist[i].i_name, rlist[i].transportID,
 			    rlist[i].scope, rlist[i].type);
