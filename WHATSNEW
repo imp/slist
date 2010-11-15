@@ -1,6 +1,14 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 5
+
+o fix persistent reservation problem after iscsitgtd restart
+
+o fix persistent reservation key mismatch when loading PGR data
+o fix return w/o unlocking mutex in spc_pr_out_register()
+  when checking for reservation conflict
+
 
 Version 4
 

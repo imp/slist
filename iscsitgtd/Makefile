@@ -29,6 +29,14 @@
 DTRACE	= dtrace
 PROG	= iscsitgtd
 
+# Conditional features
+FEATURES	=
+
+# ENABLE_EARLY_PGR_LOAD - allows iscsitgtd to load the PGR data as soon as
+# the I_T_L nexus is created, rather than delay it until the first SCSI
+# command arrives
+FEATURES	+= -DENABLE_EARLY_PGR_LOAD
+
 DSRC	= iscsi_provider.d
 DHEADER	= $(DSRC:%.d=%.h)
 DLIBSRCS = iscsi.d
@@ -65,6 +73,8 @@ CFLAGS		+= $(MACH)
 CPPFLAGS	= -I/usr/include/libxml2
 CPPFLAGS	+= -I../libiscsitgt
 CPPFLAGS	+= -I../include
+
+CPPFLAGS	+= $(FEATURES)
 
 LDLIBS		= -lsocket -lnsl -ldoor -lumem -lscf -lmd -luuid -lefi -lxml2
 LDLIBS		+= -ladm -laio -lrt -lsasl -lzfs -lavl -ldlpi
