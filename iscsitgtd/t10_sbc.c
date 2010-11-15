@@ -180,9 +180,12 @@ sbc_per_init(t10_lu_impl_t *itl)
 
 	if (d->d_state == lu_online) {
 		itl->l_cmd	= sbc_cmd;
+		itl->l_pgr_read = False;
+#ifdef ITL
 		/* Look for PGR data */
 		spc_pr_read_itl(itl);
 		itl->l_pgr_read = True;
+#endif
 	}
 	else
 		itl->l_cmd	= spc_cmd_offline;
