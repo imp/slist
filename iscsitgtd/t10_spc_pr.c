@@ -1985,13 +1985,14 @@ spc_pr_read(t10_cmd_t *cmd)
  */
 		key = spc_pr_key_find(pgr, 0, klist[i].i_name,
 		    klist[i].transportID);
-		if (key == NULL)
+		if (key == NULL) {
 			syslog(LOG_DEBUG, "No existing key for "
 			    "initiator %s transport %s; allocating new one",
 			    klist[i].i_name, klist[i].transportID);
 /*			    T10_PGR_INAME(cmd), T10_PGR_TNAME(cmd));*/
 			key = spc_pr_key_alloc(pgr, klist[i].key,
 			    klist[i].i_name, klist[i].transportID);
+		}
 		assert(key);
 	}
 
@@ -2016,7 +2017,7 @@ spc_pr_read(t10_cmd_t *cmd)
  */
 		rsrv = spc_pr_rsrv_find(pgr, 0, rlist[i].i_name,
 		    rlist[i].transportID);
-		if (rsrv == NULL)
+		if (rsrv == NULL) {
 			syslog(LOG_DEBUG, "No existing reservation for "
 			    "initiator %s transport %s; allocating new one",
 			    rlist[i].i_name, rlist[i].transportID);
@@ -2024,6 +2025,7 @@ spc_pr_read(t10_cmd_t *cmd)
 			rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
 			    rlist[i].i_name, rlist[i].transportID,
 			    rlist[i].scope, rlist[i].type);
+		}
 		assert(rsrv);
 	}
 
@@ -2154,13 +2156,14 @@ spc_pr_read_itl(t10_lu_impl_t *itl)
  */
 		key = spc_pr_key_find(pgr, 0, klist[i].i_name,
 		    klist[i].transportID);
-		if (key == NULL)
+		if (key == NULL) {
 			syslog(LOG_DEBUG, "No existing key for "
 			    "initiator %s transport %s; allocating new one",
 			    klist[i].i_name, klist[i].transportID);
 /*			    itl->l_targ->s_i_name, itl->l_targ->s_targ_base);*/
 			key = spc_pr_key_alloc(pgr, klist[i].key,
 			    klist[i].i_name, klist[i].transportID);
+		}
 		assert(key);
 	}
 
@@ -2184,7 +2187,7 @@ spc_pr_read_itl(t10_lu_impl_t *itl)
  */
 		rsrv = spc_pr_rsrv_find(pgr, 0, rlist[i].i_name,
 		    rlist[i].transportID);
-		if (rsrv == NULL)
+		if (rsrv == NULL) {
 			syslog(LOG_DEBUG, "No existing reservation for "
 			    "initiator %s transport %s; allocating new one",
 			    rlist[i].i_name, rlist[i].transportID);
@@ -2192,6 +2195,7 @@ spc_pr_read_itl(t10_lu_impl_t *itl)
 			rsrv = spc_pr_rsrv_alloc(pgr, rlist[i].key,
 			    rlist[i].i_name, rlist[i].transportID,
 			    rlist[i].scope, rlist[i].type);
+		}
 		assert(rsrv);
 	}
 
