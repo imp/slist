@@ -9,7 +9,7 @@ all:
 	cd libiscsitgt; $(MAKE) all
 	cd iscsitadm; $(MAKE) all
 	cd iscsitgtd; $(MAKE) all
-	cd pkg; pkgmk -o -f slit.prototype -d .
+	cd pkg; pkgmk -o -f slist.prototype -d .
 
 clean:
 	cd libiscsitgt; $(MAKE) clean

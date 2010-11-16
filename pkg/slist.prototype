@@ -31,7 +31,7 @@
 #
 !search ../libiscsitgt ../iscsitadm ../iscsitgtd
 i copyright=OPENSOLARIS.LICENSE
-i pkginfo=slit.pkginfo
+i pkginfo=slist.pkginfo
 i depend
 #i i.manifest
 #i r.manifest

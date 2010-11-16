@@ -21,7 +21,7 @@
 #
 # CDDL HEADER END
 #
-PKG="slit"
+PKG="slist"
 NAME="Solaris Legacy iSCSI Target"
 ARCH="i386"
 CATEGORY="system"
