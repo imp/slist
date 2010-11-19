@@ -69,7 +69,9 @@ static char *create_zfs(tgt_node_t *, ucred_t *);
 static Boolean_t create_target_dir(char *targ_name, char *local_name);
 static char *create_node_name(char *local_nick, char *alias);
 static Boolean_t create_lun(char *targ_name, char *local_name, char *type,
-    int lun, char *size_str, char *backing, err_code_t *code);
+    int lun, char *size_str, char *backing, char *guid, char *vid, char *pid,
+    int cylinders, int heads, int spt, int bps, int rpm, int interleave,
+    err_code_t *code);
 static Boolean_t create_lun_common(char *targ_name, char *local_name, int lun,
     uint64_t size, err_code_t *code);
 static Boolean_t setup_disk_backing(err_code_t *code, char *path, char *backing,
@@ -135,6 +137,15 @@ create_target(tgt_node_t *x)
 	char		*type		= NULL;
 	char		*backing	= NULL;
 	char		*node_name	= NULL;
+	char		*vid		= NULL;
+	char		*pid		= NULL;
+	char		*guid		= NULL;
+	int		cylinders	= 0;
+	int		heads		= 0;
+	int		spt		= 0;
+	int		bps		= DEFAULT_BYTES_PER;
+	int		rpm		= DEFAULT_RPM;
+	int		interleave	= DEFAULT_INTERLEAVE;
 	char		path[MAXPATHLEN];
 	int		lun		= 0; /* default to LUN 0 */
 	int		i;
@@ -144,10 +155,31 @@ create_target(tgt_node_t *x)
 	(void) pthread_rwlock_wrlock(&targ_config_mutex);
 	(void) tgt_find_value_str(x, XML_ELEMENT_BACK, &backing);
 	(void) tgt_find_value_str(x, XML_ELEMENT_ALIAS, &alias);
+	/* If VID is not specified use default value */
+	if (tgt_find_value_str(x, XML_ELEMENT_VID, &vid) == False) {
+		vid = strdup(DEFAULT_VID);
+	}
+
+	if (tgt_find_value_str(x, XML_ELEMENT_PID, &pid) == False) {
+		pid = strdup(DEFAULT_PID);
+	}
+
+	if (tgt_find_value_str(x, XML_ELEMENT_GUID, &guid) == False) {
+		pid = strdup(DEFAULT_GUID);
+	}
+
 	if (tgt_find_value_intchk(x, XML_ELEMENT_LUN, &lun) == False) {
 		xml_rtn_msg(&msg, ERR_LUN_INVALID_RANGE);
 		goto error;
 	}
+
+	(void) tgt_find_value_intchk(x, XML_ELEMENT_CYLINDERS, &cylinders);
+	(void) tgt_find_value_intchk(x, XML_ELEMENT_HEADS, &heads);
+	(void) tgt_find_value_intchk(x, XML_ELEMENT_SPT, &spt);
+
+	(void) tgt_find_value_intchk(x, XML_ELEMENT_BPS, &bps);
+	(void) tgt_find_value_intchk(x, XML_ELEMENT_RPM, &rpm);
+	(void) tgt_find_value_intchk(x, XML_ELEMENT_INTERLEAVE, &interleave);
 
 	/*
 	 * We've got to have a name element or all bets are off.
@@ -264,8 +296,8 @@ create_target(tgt_node_t *x)
 		tgt_node_add(c, l);
 	}
 
-	if (create_lun(node_name, name, type, lun, size, backing, &code)
-	    == True) {
+	if (create_lun(node_name, name, type, lun, size, backing, guid, vid,
+	    pid, cylinders, heads, spt, bps, rpm, interleave, &code) == True) {
 		if (mgmt_config_save2scf() == False) {
 			xml_rtn_msg(&msg, ERR_INTERNAL_ERROR);
 			goto error;
@@ -302,6 +334,12 @@ error:
 		free(name);
 	if (size != NULL)
 		free(size);
+	if (guid != NULL)
+		free(guid);
+	if (pid != NULL)
+		free(pid);
+	if (vid != NULL)
+		free(vid);
 	if (alias != NULL)
 		free(alias);
 	if (backing != NULL)
@@ -715,18 +753,12 @@ create_target_dir(char *targ_name, char *local_name)
  */
 static Boolean_t
 create_lun(char *targ_name, char *local_name, char *type, int lun,
-    char *size_str, char *backing, err_code_t *code)
+    char *size_str, char *backing, char *guid, char *vid, char *pid,
+    int cylinders, int heads, int spt, int bps, int rpm, int interleave,
+    err_code_t *code)
 {
 	uint64_t	size, ssize;
 	int		fd		= -1;
-	int		rpm		= DEFAULT_RPM;
-	int		heads		= DEFAULT_HEADS;
-	int		cylinders	= DEFAULT_CYLINDERS;
-	int		spt		= DEFAULT_SPT;
-	int		bytes_sect	= DEFAULT_BYTES_PER;
-	int		interleave	= DEFAULT_INTERLEAVE;
-	char		*vid		= DEFAULT_VID;
-	char		*pid		= DEFAULT_PID;
 	char		path[MAXPATHLEN];
 	tgt_node_t	*n		= NULL;
 	tgt_node_t	*pn		= NULL;
@@ -763,7 +795,7 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 	pn = tgt_node_alloc(XML_ELEMENT_VERS, String, "1.0");
 	tgt_node_add_attr(n, pn);
 
-	pn = tgt_node_alloc(XML_ELEMENT_GUID, String, "0");
+	pn = tgt_node_alloc(XML_ELEMENT_GUID, String, guid);
 	tgt_node_add(n, pn);
 	pn = tgt_node_alloc(XML_ELEMENT_PID, String, pid);
 	tgt_node_add(n, pn);
@@ -779,7 +811,10 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 		if (setup_disk_backing(code, path, backing, n, &size) == False)
 			goto error;
 
-		create_geom(size, &cylinders, &heads, &spt);
+		/* Fabricate CHS geometry if it wasn't specified */
+		if ((cylinders == 0) || (heads == 0) || (spt == 0)) {
+			create_geom(size, &cylinders, &heads, &spt);
+		}
 
 		pn = tgt_node_alloc(XML_ELEMENT_RPM, Int, &rpm);
 		tgt_node_add(n, pn);
@@ -789,7 +824,7 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 		tgt_node_add(n, pn);
 		pn = tgt_node_alloc(XML_ELEMENT_SPT, Int, &spt);
 		tgt_node_add(n, pn);
-		pn = tgt_node_alloc(XML_ELEMENT_BPS, Int, &bytes_sect);
+		pn = tgt_node_alloc(XML_ELEMENT_BPS, Int, &bps);
 		tgt_node_add(n, pn);
 		pn = tgt_node_alloc(XML_ELEMENT_INTERLEAVE, Int, &interleave);
 		tgt_node_add(n, pn);

@@ -143,6 +143,7 @@ extern "C" {
 #define	DEFAULT_PID		"SOLARIS"
 #define	DEFAULT_VID		"SUN"
 #define	DEFAULT_REVISION	"1"
+#define	DEFAULT_GUID		"0"
 
 /*
  * SPC-3 revision 21c, section 7.6.4.4.4

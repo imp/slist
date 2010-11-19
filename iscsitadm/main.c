@@ -128,8 +128,25 @@ optionTbl_t longOptions[] = {
 	{"interval", required_arg, 'I', "seconds"},
 	{"count", required_arg, 'N', "number"},
 	{"all", no_arg, 'A', NULL},
+	{"guid", required_arg, 'G', "SCSI3 GUID"},
+	{"vendor", required_arg, 'V', "SCSI Vendor ID"},
+	{"product", required_arg, 'O', "SCSI Product ID"},
+	{"cylinders", required_arg, 'c', "Number of cylinders"},
+	{"heads", required_arg, 'h', "Number of heads"},
+	{"sectors", required_arg, 'k', "Number of sectors"},
+	{"bps", required_arg, 'B', "Bytes per sector"},
+	{"rpm", required_arg, 'M', "RPM value"},
+	{"interleave", required_arg, 'L', "Interleave factor"},
 	{NULL, 0, 0, 0}
 };
+
+/*
+ * single-letter options ruler
+ * ABCDEFGHIJKLMNOPQRSTUVWXYZ
+ *
+ *    DEF   JK     Q  TU WXYZ
+ *       g  j    o q     wxy
+ */
 
 /*
  * Add new subcommands here
@@ -210,7 +227,7 @@ objectRules_t objectRules[] = {
  * If it's not here, there are no options for that object.
  */
 optionRules_t optionRules[] = {
-	{TARGET, CREATE, "tuzab", B_TRUE, NULL},
+	{TARGET, CREATE, "tuzabGVOchkBML", B_TRUE, NULL},
 	{TARGET, MODIFY, "plamzu", B_TRUE, NULL},
 	{TARGET, DELETE, "ulp", B_TRUE, NULL},
 	{TARGET, LIST,   "v", B_FALSE, NULL},
@@ -439,6 +456,42 @@ createTarget(int operandLen, char *operand[], cmdOptions_t *options)
 				break;
 			case 'b': /* backing store */
 				tgt_buf_add(&first_str, XML_ELEMENT_BACK,
+				    optionList->optarg);
+				break;
+			case 'G': /* SCSI3 GUID */
+				tgt_buf_add(&first_str, XML_ELEMENT_GUID,
+				    optionList->optarg);
+				break;
+			case 'V': /* SCSI Vendor ID */
+				tgt_buf_add(&first_str, XML_ELEMENT_VID,
+				    optionList->optarg);
+				break;
+			case 'O': /* SCSI Product ID */
+				tgt_buf_add(&first_str, XML_ELEMENT_PID,
+				    optionList->optarg);
+				break;
+			case 'c': /* SCSI Geometry - cylinders */
+				tgt_buf_add(&first_str, XML_ELEMENT_CYLINDERS,
+				    optionList->optarg);
+				break;
+			case 'h': /* SCSI Geometry - heads */
+				tgt_buf_add(&first_str, XML_ELEMENT_HEADS,
+				    optionList->optarg);
+				break;
+			case 'k': /* SCSI Geometry - sectors per track */
+				tgt_buf_add(&first_str, XML_ELEMENT_SPT,
+				    optionList->optarg);
+				break;
+			case 'B': /* Bytes per Sector */
+				tgt_buf_add(&first_str, XML_ELEMENT_BPS,
+				    optionList->optarg);
+				break;
+			case 'M': /* RPM */
+				tgt_buf_add(&first_str, XML_ELEMENT_RPM,
+				    optionList->optarg);
+				break;
+			case 'L': /* Interleave */
+				tgt_buf_add(&first_str, XML_ELEMENT_INTERLEAVE,
 				    optionList->optarg);
 				break;
 			default:
