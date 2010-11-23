@@ -1,6 +1,12 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 7
+
+o Allow setting maxrecv, TPGT and ACL during target creation
+o Fix issue with incorrect PRODUCT ID initialization when no GUID is set
+
+
 Version 6
 
 o Allow setting many additional SCSI parameters during LU creation
