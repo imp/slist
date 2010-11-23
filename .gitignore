@@ -1,4 +1,6 @@
 .make.state
+nbproject
+Makefile-*.mk
 iscsi_provider.h
 *.o
 libiscsitgt.so
