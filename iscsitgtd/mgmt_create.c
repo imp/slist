@@ -140,6 +140,9 @@ create_target(tgt_node_t *x)
 	char		*vid		= NULL;
 	char		*pid		= NULL;
 	char		*guid		= NULL;
+	char		*maxrecv	= NULL;
+	char		*tpgt		= NULL;
+	char		*acl		= NULL;
 	int		cylinders	= 0;
 	int		heads		= 0;
 	int		spt		= 0;
@@ -165,7 +168,7 @@ create_target(tgt_node_t *x)
 	}
 
 	if (tgt_find_value_str(x, XML_ELEMENT_GUID, &guid) == False) {
-		pid = strdup(DEFAULT_GUID);
+		guid = strdup(DEFAULT_GUID);
 	}
 
 	if (tgt_find_value_intchk(x, XML_ELEMENT_LUN, &lun) == False) {
@@ -245,6 +248,58 @@ create_target(tgt_node_t *x)
 		goto error;
 	}
 
+	/* Extract and decode MAXRECV (if any) */
+	if (tgt_find_value_str(x, XML_ELEMENT_MAXRECV, &maxrecv) == True) {
+		uint64_t	val;
+
+		if (maxrecv == NULL) {
+			xml_rtn_msg(&msg, ERR_SYNTAX_EMPTY_MAXRECV);
+			goto error;
+		}
+
+		/* Validate MaxRecv value */
+		if ((strtoll_multiplier(maxrecv, &val) == False) ||
+		    (val < MAXRCVDATA_MIN) || (val > MAXRCVDATA_MAX)) {
+			xml_rtn_msg(&msg, ERR_INVALID_MAXRECV);
+			goto error;
+		}
+		free(maxrecv);
+		if ((maxrecv = malloc(32)) == NULL) {
+			xml_rtn_msg(&msg, ERR_NO_MEM);
+			goto error;
+		}
+		(void) snprintf(maxrecv, 32, "%d", val);
+	}
+
+	/* Extract TPGT (if any) */
+	if (tgt_find_value_str(x, XML_ELEMENT_TPGT, &tpgt) == True) {
+		uint64_t	val;
+		char		*m;
+
+		if (tpgt == NULL) {
+			xml_rtn_msg(&msg, ERR_SYNTAX_EMPTY_TPGT);
+			goto error;
+		}
+
+		/*
+		 * Validate that the Target Portal Group Tag is reasonable.
+		 */
+		val = strtoll(tpgt, &m, 0);
+		if ((val < TPGT_MIN) || (val > TPGT_MAX) ||
+		    ((m != NULL) && (*m != '\0'))) {
+			xml_rtn_msg(&msg, ERR_INVALID_TPGT);
+			goto error;
+		}
+	}
+
+	/* Extract ACL (if any) */
+	if (tgt_find_value_str(x, XML_ELEMENT_ACL, &acl) == True) {
+		if (acl == NULL) {
+			xml_rtn_msg(&msg, ERR_SYNTAX_EMPTY_ACL);
+			goto error;
+		}
+	}
+
 	/*
 	 * See if we already have a local target name created. If so,
 	 * the user is most likely wanting to create another LUN for this
@@ -280,6 +335,38 @@ create_target(tgt_node_t *x)
 			c = tgt_node_alloc(XML_ELEMENT_ALIAS, String, alias);
 			tgt_node_add(n, c);
 		}
+		if (maxrecv != NULL) {
+			c = tgt_node_alloc(XML_ELEMENT_MAXRECV, String,
+			    maxrecv);
+			tgt_node_add(n, c);
+		}
+
+		if (tpgt != NULL) {
+			c = tgt_node_alloc(XML_ELEMENT_TPGTLIST, String, "");
+			l = tgt_node_alloc(XML_ELEMENT_TPGT, String, tpgt);
+			/* How about memory allocation failure check here ?
+			 * something along the line
+			 * if ((c != NULL) && (l != NULL)) {
+			 *         tgt_node_add(c, l);
+			 *         tgt_node_add(c, l);
+			 * } else {
+			 *         if (c != NULL) tgt_node_free(c);
+			 *         if (l != NULL) tgt_node_free(l);
+			 *         xml_rtn_msg(&msg, ERR_NO_MEM);
+			 *         goto error;
+			 * }
+			 */
+			tgt_node_add(c, l);
+			tgt_node_add(n, c);
+		}
+
+		if (acl != NULL) {
+			c = tgt_node_alloc(XML_ELEMENT_ACLLIST, String, "");
+			l = tgt_node_alloc(XML_ELEMENT_INIT, String, acl);
+			tgt_node_add(c, l);
+			tgt_node_add(n, c);
+		}
+
 		tgt_node_add(targets_config, n);
 
 	} else {
@@ -334,6 +421,12 @@ error:
 		free(name);
 	if (size != NULL)
 		free(size);
+	if (acl != NULL)
+		free(acl);
+	if (tpgt != NULL)
+		free(tpgt);
+	if (maxrecv != NULL)
+		free(maxrecv);
 	if (guid != NULL)
 		free(guid);
 	if (pid != NULL)
