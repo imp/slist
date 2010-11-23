@@ -1,6 +1,18 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 6
+
+o Allow setting many additional SCSI parameters during LU creation
+        SCSI Vendor ID (-V)
+        SCSI Product ID (-O)
+        SCSI3 GUID (-G)
+        Disk geometry - CHS (-c, -h, -k)
+        Disk RPM (-M)
+        Disk BPS (-B)
+        Disk interleave (-L)
+
+
 Version 5
 
 o fix persistent reservation problem after iscsitgtd restart
