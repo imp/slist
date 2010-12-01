@@ -192,6 +192,7 @@ typedef struct _subcommand {
 
 #define	required_arg	required_argument
 #define	no_arg		no_argument
+#define	optional_arg	optional_argument
 
 /*
  * Add short options and long options here

@@ -112,7 +112,7 @@ optionTbl_t longOptions[] = {
 	{"tpgt", required_arg, 'p', "tpgt number"},
 	{"acl", required_arg, 'l', "local initiator"},
 	{"maxrecv", required_arg, 'm', "max recv data segment length"},
-	{"chap-secret", no_arg, 'C', NULL},
+	{"chap-secret", required_arg, 'C', NULL},
 	{"chap-name", required_arg, 'H', "chap username"},
 	{"iqn", required_arg, 'n', "iSCSI node name"},
 	{"ip-address", required_arg, 'i', "ip address"},
@@ -676,14 +676,23 @@ modifyInitiator(int operandLen, char *operand[], cmdOptions_t *options)
 			}
 			break;
 		case 'C': /* chap-secret */
-			ret = getSecret((char *)&chapSecret[0], &secretLen,
-			    MIN_CHAP_SECRET_LEN, MAX_CHAP_SECRET_LEN);
-			if (ret != 0) {
-				(void) fprintf(stderr, "%s: %s\n", cmdName,
-				    gettext("Cannot read CHAP secret"));
-				return (ret);
+			if (strlen(optionList->optarg) != 0) {
+				(void) snprintf(chapSecret,
+				    MAX_CHAP_SECRET_LEN + 1, "%s",
+				    optionList->optarg);
+				secretLen = strlen(chapSecret);
+			} else {
+				ret = getSecret((char *)&chapSecret[0],
+				    &secretLen, MIN_CHAP_SECRET_LEN,
+				    MAX_CHAP_SECRET_LEN);
+				if (ret != 0) {
+					(void) fprintf(stderr, "%s: %s\n",
+					    cmdName,
+					    gettext("Cannot read CHAP secret"));
+					return (ret);
+				}
+				chapSecret[secretLen] = '\0';
 			}
-			chapSecret[secretLen] = '\0';
 			if (secretLen != 0) {
 				tgt_buf_add(&first_str, XML_ELEMENT_CHAPSECRET,
 				    chapSecret);
@@ -815,18 +824,25 @@ modifyAdmin(int operandLen, char *operand[], cmdOptions_t *options)
 				}
 				break;
 			case 'C': /* chap secert */
-				ret = getSecret((char *)&chapSecret[0],
-				    &secretLen,
-				    MIN_CHAP_SECRET_LEN,
-				    MAX_CHAP_SECRET_LEN);
-				if (ret != 0) {
-					(void) fprintf(stderr, "%s: %s\n",
-					    cmdName,
-					    gettext("Cannot read CHAP secret"));
-					free(first_str);
-					return (ret);
+				if (strlen(optionList->optarg) != 0) {
+					(void) snprintf(chapSecret,
+					    MAX_CHAP_SECRET_LEN + 1, "%s",
+						 optionList->optarg);
+					secretLen = strlen(chapSecret);
+				} else {
+					ret = getSecret((char *)&chapSecret[0],
+					    &secretLen,
+					    MIN_CHAP_SECRET_LEN,
+					    MAX_CHAP_SECRET_LEN);
+					if (ret != 0) {
+						(void) fprintf(stderr,
+						    "%s: %s\n", cmdName,
+						    gettext("Cannot read CHAP secret"));
+						free(first_str);
+						return (ret);
+					}
+					chapSecret[secretLen] = '\0';
 				}
-				chapSecret[secretLen] = '\0';
 				if (secretLen != 0) {
 					tgt_buf_add(&first_str,
 					    XML_ELEMENT_CHAPSECRET,
