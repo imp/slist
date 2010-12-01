@@ -227,7 +227,7 @@ objectRules_t objectRules[] = {
  * If it's not here, there are no options for that object.
  */
 optionRules_t optionRules[] = {
-	{TARGET, CREATE, "tuzabGVOchkBMLplm", B_TRUE, NULL},
+	{TARGET, CREATE, "tuzabGVOchkBMLplmn", B_TRUE, NULL},
 	{TARGET, MODIFY, "plamzu", B_TRUE, NULL},
 	{TARGET, DELETE, "ulp", B_TRUE, NULL},
 	{TARGET, LIST,   "v", B_FALSE, NULL},
@@ -504,6 +504,10 @@ createTarget(int operandLen, char *operand[], cmdOptions_t *options)
 				break;
 			case 'm': /* max recv */
 				tgt_buf_add(&first_str, XML_ELEMENT_MAXRECV,
+				    optionList->optarg);
+				break;
+			case 'n': /* iqn */
+				tgt_buf_add(&first_str, XML_ELEMENT_INAME,
 				    optionList->optarg);
 				break;
 			default:

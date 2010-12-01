@@ -156,6 +156,7 @@ create_target(tgt_node_t *x)
 	err_code_t	code;
 
 	(void) pthread_rwlock_wrlock(&targ_config_mutex);
+	(void) tgt_find_value_str(x, XML_ELEMENT_INAME, &node_name);
 	(void) tgt_find_value_str(x, XML_ELEMENT_BACK, &backing);
 	(void) tgt_find_value_str(x, XML_ELEMENT_ALIAS, &alias);
 	/* If VID is not specified use default value */
@@ -316,9 +317,13 @@ create_target(tgt_node_t *x)
 			xml_rtn_msg(&msg, ERR_LUN_ZERO_NOT_FIRST);
 			goto error;
 		}
-		if ((node_name = create_node_name(name, alias)) == NULL) {
-			xml_rtn_msg(&msg, ERR_CREATE_NAME_TOO_LONG);
-			goto error;
+		/* Generate new unique iSCSI node name if we none is giving */
+		if (node_name == NULL) {
+			node_name = create_node_name(name, alias);
+			if (node_name == NULL) {
+				xml_rtn_msg(&msg, ERR_CREATE_NAME_TOO_LONG);
+				goto error;
+			}
 		}
 		if (create_target_dir(node_name, name) == False) {
 			xml_rtn_msg(&msg, ERR_CREATE_TARGET_DIR_FAILED);
