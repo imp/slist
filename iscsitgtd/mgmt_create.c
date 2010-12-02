@@ -71,11 +71,11 @@ static char *create_node_name(char *local_nick, char *alias);
 static Boolean_t create_lun(char *targ_name, char *local_name, char *type,
     int lun, char *size_str, char *backing, char *guid, char *vid, char *pid,
     int cylinders, int heads, int spt, int bps, int rpm, int interleave,
-    err_code_t *code);
+    Boolean_t ignore_link, err_code_t *code);
 static Boolean_t create_lun_common(char *targ_name, char *local_name, int lun,
     uint64_t size, err_code_t *code);
 static Boolean_t setup_disk_backing(err_code_t *code, char *path, char *backing,
-    tgt_node_t *n, uint64_t *size);
+    tgt_node_t *n, Boolean_t ignore_link, uint64_t *size);
 static Boolean_t setup_raw_backing(err_code_t *code, char *path, char *backing,
     uint64_t *size);
 
@@ -152,6 +152,7 @@ create_target(tgt_node_t *x)
 	char		path[MAXPATHLEN];
 	int		lun		= 0; /* default to LUN 0 */
 	int		i;
+	Boolean_t	ignore_link	= False;
 	tgt_node_t	*n, *c, *l;
 	err_code_t	code;
 
@@ -184,6 +185,7 @@ create_target(tgt_node_t *x)
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_BPS, &bps);
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_RPM, &rpm);
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_INTERLEAVE, &interleave);
+	(void) tgt_find_value_boolean(x, XML_ELEMENT_IGNORE_LINK, &ignore_link);
 
 	/*
 	 * We've got to have a name element or all bets are off.
@@ -389,7 +391,8 @@ create_target(tgt_node_t *x)
 	}
 
 	if (create_lun(node_name, name, type, lun, size, backing, guid, vid,
-	    pid, cylinders, heads, spt, bps, rpm, interleave, &code) == True) {
+	    pid, cylinders, heads, spt, bps, rpm, interleave, ignore_link,
+	    &code) == True) {
 		if (mgmt_config_save2scf() == False) {
 			xml_rtn_msg(&msg, ERR_INTERNAL_ERROR);
 			goto error;
@@ -853,7 +856,7 @@ static Boolean_t
 create_lun(char *targ_name, char *local_name, char *type, int lun,
     char *size_str, char *backing, char *guid, char *vid, char *pid,
     int cylinders, int heads, int spt, int bps, int rpm, int interleave,
-    err_code_t *code)
+    Boolean_t ignore_link, err_code_t *code)
 {
 	uint64_t	size, ssize;
 	int		fd		= -1;
@@ -883,7 +886,7 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 	 */
 	(void) snprintf(path, sizeof (path), "%s/%s/%s%d", target_basedir,
 	    targ_name, LUNBASE, lun);
-	if (access(path, F_OK) == 0) {
+	if ((access(path, F_OK) == 0) && (ignore_link == False)) {
 		*code = ERR_LUN_EXISTS;
 		return (False);
 	}
@@ -906,8 +909,10 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 
 		(void) snprintf(path, sizeof (path), "%s/%s/lun.%d",
 		    target_basedir, targ_name, lun);
-		if (setup_disk_backing(code, path, backing, n, &size) == False)
+		if (setup_disk_backing(code, path, backing, n, ignore_link,
+		    &size) == False) {
 			goto error;
+		}
 
 		/* Fabricate CHS geometry if it wasn't specified */
 		if ((cylinders == 0) || (heads == 0) || (spt == 0)) {
@@ -941,8 +946,10 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 
 		(void) snprintf(path, sizeof (path), "%s/%s/lun.%d",
 		    target_basedir, targ_name, lun);
-		if (setup_disk_backing(code, path, backing, n, &size) == False)
+		if (setup_disk_backing(code, path, backing, n, ignore_link,
+		    &size) == False) {
 			goto error;
+		}
 #endif
 
 	} else if (strcmp(type, TGT_TYPE_RAW) == 0) {
@@ -1183,7 +1190,7 @@ readefi(int fd, struct dk_gpt **efi, int *slice)
  */
 static Boolean_t
 setup_disk_backing(err_code_t *code, char *path, char *backing, tgt_node_t *n,
-    uint64_t *size)
+    Boolean_t ignore_link, uint64_t *size)
 {
 	struct stat	s;
 	char		*raw_name, buf[512];
@@ -1253,7 +1260,7 @@ setup_disk_backing(err_code_t *code, char *path, char *backing, tgt_node_t *n,
 		return (False);
 	}
 
-	if (symlink(backing, path)) {
+	if ((symlink(backing, path) == -1) && (ignore_link == False)) {
 		*code = ERR_CREATE_SYMLINK_FAILED;
 		return (False);
 	}
