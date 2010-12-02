@@ -71,11 +71,11 @@ static char *create_node_name(char *local_nick, char *alias);
 static Boolean_t create_lun(char *targ_name, char *local_name, char *type,
     int lun, char *size_str, char *backing, char *guid, char *vid, char *pid,
     int cylinders, int heads, int spt, int bps, int rpm, int interleave,
-    err_code_t *code);
+    Boolean_t skip_back, err_code_t *code);
 static Boolean_t create_lun_common(char *targ_name, char *local_name, int lun,
-    uint64_t size, err_code_t *code);
+    uint64_t size, Boolean_t skip_back, err_code_t *code);
 static Boolean_t setup_disk_backing(err_code_t *code, char *path, char *backing,
-    tgt_node_t *n, uint64_t *size);
+    tgt_node_t *n, Boolean_t skip_back, uint64_t *size);
 static Boolean_t setup_raw_backing(err_code_t *code, char *path, char *backing,
     uint64_t *size);
 
@@ -152,6 +152,7 @@ create_target(tgt_node_t *x)
 	char		path[MAXPATHLEN];
 	int		lun		= 0; /* default to LUN 0 */
 	int		i;
+	Boolean_t	skip_back	= False;
 	tgt_node_t	*n, *c, *l;
 	err_code_t	code;
 
@@ -184,6 +185,7 @@ create_target(tgt_node_t *x)
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_BPS, &bps);
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_RPM, &rpm);
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_INTERLEAVE, &interleave);
+	(void) tgt_find_value_boolean(x, XML_ELEMENT_SKIP_BACK, &skip_back);
 
 	/*
 	 * We've got to have a name element or all bets are off.
@@ -384,12 +386,22 @@ create_target(tgt_node_t *x)
 			xml_rtn_msg(&msg, ERR_INTERNAL_ERROR);
 			goto error;
 		}
+
+		/* Check for duplicate LUN */
+		for (l = c->x_child; l; l = l->x_sibling) {
+			if (atoi(l->x_value) == lun) {
+				xml_rtn_msg(&msg, ERR_LUN_EXISTS);
+				goto error;
+			}
+		}
+
 		l = tgt_node_alloc(XML_ELEMENT_LUN, Int, &lun);
 		tgt_node_add(c, l);
 	}
 
 	if (create_lun(node_name, name, type, lun, size, backing, guid, vid,
-	    pid, cylinders, heads, spt, bps, rpm, interleave, &code) == True) {
+	    pid, cylinders, heads, spt, bps, rpm, interleave, skip_back,
+	    &code) == True) {
 		if (mgmt_config_save2scf() == False) {
 			xml_rtn_msg(&msg, ERR_INTERNAL_ERROR);
 			goto error;
@@ -853,7 +865,7 @@ static Boolean_t
 create_lun(char *targ_name, char *local_name, char *type, int lun,
     char *size_str, char *backing, char *guid, char *vid, char *pid,
     int cylinders, int heads, int spt, int bps, int rpm, int interleave,
-    err_code_t *code)
+    Boolean_t skip_back, err_code_t *code)
 {
 	uint64_t	size, ssize;
 	int		fd		= -1;
@@ -883,7 +895,7 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 	 */
 	(void) snprintf(path, sizeof (path), "%s/%s/%s%d", target_basedir,
 	    targ_name, LUNBASE, lun);
-	if (access(path, F_OK) == 0) {
+	if ((access(path, F_OK) == 0) && (skip_back == False)) {
 		*code = ERR_LUN_EXISTS;
 		return (False);
 	}
@@ -906,8 +918,10 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 
 		(void) snprintf(path, sizeof (path), "%s/%s/lun.%d",
 		    target_basedir, targ_name, lun);
-		if (setup_disk_backing(code, path, backing, n, &size) == False)
+		if (setup_disk_backing(code, path, backing, n, skip_back,
+		    &size) == False) {
 			goto error;
+		}
 
 		/* Fabricate CHS geometry if it wasn't specified */
 		if ((cylinders == 0) || (heads == 0) || (spt == 0)) {
@@ -941,8 +955,10 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 
 		(void) snprintf(path, sizeof (path), "%s/%s/lun.%d",
 		    target_basedir, targ_name, lun);
-		if (setup_disk_backing(code, path, backing, n, &size) == False)
+		if (setup_disk_backing(code, path, backing, n, skip_back,
+		    &size) == False) {
 			goto error;
+		}
 #endif
 
 	} else if (strcmp(type, TGT_TYPE_RAW) == 0) {
@@ -994,7 +1010,7 @@ create_lun(char *targ_name, char *local_name, char *type, int lun,
 	if ((strcmp(type, TGT_TYPE_DISK) == 0) ||
 	    (strcmp(type, TGT_TYPE_TAPE) == 0)) {
 		if (create_lun_common(targ_name, local_name, lun, size,
-		    code) == False)
+		    skip_back, code) == False)
 			goto error;
 	}
 
@@ -1025,12 +1041,11 @@ error:
  */
 static Boolean_t
 create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
-    err_code_t *code)
+    Boolean_t skip_back, err_code_t *code)
 {
 	struct stat		s;
 	int			fd			= -1;
 	char			path[MAXPATHLEN];
-	char			buf[512];
 	struct statvfs		fs;
 	tgt_node_t		*node			= NULL;
 	tgt_node_t		*c;
@@ -1043,20 +1058,26 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 	 */
 	(void) snprintf(path, sizeof (path), "%s/%s/%s%d",
 	    target_basedir, targ_name, LUNBASE, lun);
-	if ((fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600)) < 0)
-		goto error;
 
-	(void) lseek(fd, size - 512LL, 0);
-	bzero(buf, sizeof (buf));
-	if (write(fd, buf, sizeof (buf)) != sizeof (buf)) {
-		(void) unlink(path);
-		if (errno == EFBIG)
-			*code = ERR_FILE_TOO_BIG;
-		else
+	if ((skip_back == False) &&
+	    ((stat(path, &s) == -1) || ((s.st_mode & S_IFMT) == S_IFREG))) {
+		if ((fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600)) == -1) {
 			*code = ERR_FAILED_TO_CREATE_LU;
-		goto error;
+			goto error;
+		}
+
+		if (ftruncate(fd, size) == -1) {
+			(void) unlink(path);
+			if (errno == EFBIG) {
+				*code = ERR_FILE_TOO_BIG;
+			} else {
+				*code = ERR_FAILED_TO_CREATE_LU;
+			}
+			goto error;
+		}
+		(void) fstat(fd, &s);
+		(void) close(fd);
 	}
-	(void) close(fd);
 
 	/*
 	 * Set the fd back to -1 so that if an error occurs we don't
@@ -1068,17 +1089,13 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 	 */
 	fd = -1;
 
-	if (stat(path, &s) != 0) {
-		*code = ERR_FAILED_TO_CREATE_LU;
-		goto error;
-	}
-
 	/*
 	 * If the backing store is a regular file and the default is
 	 * used which initializes the file instead of sparse allocation
 	 * go ahead a set things up.
 	 */
-	if ((thin_provisioning == False) && ((s.st_mode & S_IFMT) == S_IFREG)) {
+	if ((skip_back == False) && (thin_provisioning == False) &&
+	    ((s.st_mode & S_IFMT) == S_IFREG)) {
 		thick_provo_t	*tp;
 		pthread_t	junk;
 
@@ -1136,6 +1153,7 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 		if (mgmt_param_save2scf(node, local_name, lun) == False) {
 			queue_prt(mgmtq, Q_STE_ERRS,
 			    "GEN%d  failed to dump out params", lun);
+			*code = ERR_UPDATE_TARGCFG_FAILED;
 			goto error;
 		}
 		iscsi_inventory_change(targ_name);
@@ -1183,7 +1201,7 @@ readefi(int fd, struct dk_gpt **efi, int *slice)
  */
 static Boolean_t
 setup_disk_backing(err_code_t *code, char *path, char *backing, tgt_node_t *n,
-    uint64_t *size)
+    Boolean_t skip_back, uint64_t *size)
 {
 	struct stat	s;
 	char		*raw_name, buf[512];
@@ -1197,8 +1215,9 @@ setup_disk_backing(err_code_t *code, char *path, char *backing, tgt_node_t *n,
 	 * been done. If the backing store is null at this point everything
 	 * is okay so just return True.
 	 */
-	if (backing == NULL)
+	if ((skip_back == True) || (backing == NULL)) {
 		return (True);
+	}
 
 	if (stat(backing, &s) == -1) {
 		if (*size == 0) {
@@ -1253,7 +1272,7 @@ setup_disk_backing(err_code_t *code, char *path, char *backing, tgt_node_t *n,
 		return (False);
 	}
 
-	if (symlink(backing, path)) {
+	if ((symlink(backing, path) == -1) && (skip_back == False)) {
 		*code = ERR_CREATE_SYMLINK_FAILED;
 		return (False);
 	}

@@ -137,6 +137,7 @@ optionTbl_t longOptions[] = {
 	{"bps", required_arg, 'B', "Bytes per sector"},
 	{"rpm", required_arg, 'M', "RPM value"},
 	{"interleave", required_arg, 'L', "Interleave factor"},
+	{"skip-bs-validation", no_arg, 'x', "Skip backing-store validation"},
 	{NULL, 0, 0, 0}
 };
 
@@ -145,7 +146,7 @@ optionTbl_t longOptions[] = {
  * ABCDEFGHIJKLMNOPQRSTUVWXYZ
  *
  *    DEF   JK     Q  TU WXYZ
- *       g  j    o q     wxy
+ *       g  j    o q     w y
  */
 
 /*
@@ -227,7 +228,7 @@ objectRules_t objectRules[] = {
  * If it's not here, there are no options for that object.
  */
 optionRules_t optionRules[] = {
-	{TARGET, CREATE, "tuzabGVOchkBMLplmn", B_TRUE, NULL},
+	{TARGET, CREATE, "tuzabGVOchkBMLplmnx", B_TRUE, NULL},
 	{TARGET, MODIFY, "plamzu", B_TRUE, NULL},
 	{TARGET, DELETE, "ulp", B_TRUE, NULL},
 	{TARGET, LIST,   "v", B_FALSE, NULL},
@@ -509,6 +510,10 @@ createTarget(int operandLen, char *operand[], cmdOptions_t *options)
 			case 'n': /* iqn */
 				tgt_buf_add(&first_str, XML_ELEMENT_INAME,
 				    optionList->optarg);
+				break;
+			case 'x': /* skip backing store validation */
+				tgt_buf_add(&first_str, XML_ELEMENT_SKIP_BACK,
+				    OPT_TRUE);
 				break;
 			default:
 				(void) fprintf(stderr, "%s: %c: %s\n",
