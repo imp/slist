@@ -386,6 +386,15 @@ create_target(tgt_node_t *x)
 			xml_rtn_msg(&msg, ERR_INTERNAL_ERROR);
 			goto error;
 		}
+
+		/* Check for duplicate LUN */
+		for (l = c->x_child; l; l = l->x_sibling) {
+			if (atoi(l->x_value) == lun) {
+				xml_rtn_msg(&msg, ERR_LUN_EXISTS);
+				goto error;
+			}
+		}
+
 		l = tgt_node_alloc(XML_ELEMENT_LUN, Int, &lun);
 		tgt_node_add(c, l);
 	}
