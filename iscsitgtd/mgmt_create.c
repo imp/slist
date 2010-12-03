@@ -1062,15 +1062,21 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 	if ((fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600)) < 0)
 		goto error;
 
-	(void) lseek(fd, size - 512LL, 0);
-	bzero(buf, sizeof (buf));
-	if (write(fd, buf, sizeof (buf)) != sizeof (buf)) {
-		(void) unlink(path);
-		if (errno == EFBIG)
-			*code = ERR_FILE_TOO_BIG;
-		else
-			*code = ERR_FAILED_TO_CREATE_LU;
+	if (fstat(fd, &s) != 0) {
+		*code = ERR_FAILED_TO_CREATE_LU;
 		goto error;
+	}
+
+	if ((s.st_mode & S_IFMT) == S_IFREG) {
+		if (ftruncate(fd, size) == -1) {
+			(void) unlink(path);
+			if (errno == EFBIG) {
+				*code = ERR_FILE_TOO_BIG;
+			} else {
+				*code = ERR_FAILED_TO_CREATE_LU;
+			}
+			goto error;
+		}
 	}
 	(void) close(fd);
 
@@ -1083,11 +1089,6 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 	 * be ugly, not to mention difficult to track down.
 	 */
 	fd = -1;
-
-	if (stat(path, &s) != 0) {
-		*code = ERR_FAILED_TO_CREATE_LU;
-		goto error;
-	}
 
 	/*
 	 * If the backing store is a regular file and the default is
