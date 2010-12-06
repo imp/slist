@@ -137,7 +137,7 @@ optionTbl_t longOptions[] = {
 	{"bps", required_arg, 'B', "Bytes per sector"},
 	{"rpm", required_arg, 'M', "RPM value"},
 	{"interleave", required_arg, 'L', "Interleave factor"},
-	{"ignore-link", no_arg, 'x', "Ignore existing backing-store links"},
+	{"skip-bs-validation", no_arg, 'x', "Skip backing-store validation"},
 	{NULL, 0, 0, 0}
 };
 
@@ -511,8 +511,8 @@ createTarget(int operandLen, char *operand[], cmdOptions_t *options)
 				tgt_buf_add(&first_str, XML_ELEMENT_INAME,
 				    optionList->optarg);
 				break;
-			case 'x': /* ignore-link */
-				tgt_buf_add(&first_str, XML_ELEMENT_IGNORE_LINK,
+			case 'x': /* skip backing store validation */
+				tgt_buf_add(&first_str, XML_ELEMENT_SKIP_BACK,
 				    OPT_TRUE);
 				break;
 			default:

@@ -152,7 +152,7 @@ typedef enum {
 #define	XML_VALUE_TRUE		"true"
 #define	XML_ELEMENT_PGR_PERSIST	"PGR-persist"
 #define	XML_ELEMENT_PGR_BASEDIR	"PGR-basedir"
-#define	XML_ELEMENT_IGNORE_LINK	"ignore-link"
+#define	XML_ELEMENT_SKIP_BACK	"skip-backing-store"
 
 typedef enum {
 	NodeFree,
