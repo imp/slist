@@ -1062,7 +1062,7 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 
 	if ((stat(path, &s) != 0) || ((s.st_mode & S_IFMT) == S_IFREG)) {
 		if ((fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600)) == -1) {
-			*code = ERR_FAILED_TO_CREATE_LUN;
+			*code = ERR_FAILED_TO_CREATE_LU;
 			goto error;
 		}
 
