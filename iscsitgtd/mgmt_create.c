@@ -1215,8 +1215,9 @@ setup_disk_backing(err_code_t *code, char *path, char *backing, tgt_node_t *n,
 	 * been done. If the backing store is null at this point everything
 	 * is okay so just return True.
 	 */
-	if (backing == NULL)
+	if ((skip_back == True) || (backing == NULL)) {
 		return (True);
+	}
 
 	if (stat(backing, &s) == -1) {
 		if (*size == 0) {
