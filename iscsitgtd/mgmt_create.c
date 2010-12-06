@@ -1059,15 +1059,13 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 	 */
 	(void) snprintf(path, sizeof (path), "%s/%s/%s%d",
 	    target_basedir, targ_name, LUNBASE, lun);
-	if ((fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600)) < 0)
-		goto error;
 
-	if (fstat(fd, &s) != 0) {
-		*code = ERR_FAILED_TO_CREATE_LU;
-		goto error;
-	}
+	if ((stat(path, &s) != 0) || ((s.st_mode & S_IFMT) == S_IFREG)) {
+		if ((fd = open(path, O_RDWR|O_CREAT|O_LARGEFILE, 0600)) == -1) {
+			*code = ERR_FAILED_TO_CREATE_LUN;
+			goto error;
+		}
 
-	if ((s.st_mode & S_IFMT) == S_IFREG) {
 		if (ftruncate(fd, size) == -1) {
 			(void) unlink(path);
 			if (errno == EFBIG) {
@@ -1077,8 +1075,9 @@ create_lun_common(char *targ_name, char *local_name, int lun, uint64_t size,
 			}
 			goto error;
 		}
+		(void) fstat(fd, &s);
+		(void) close(fd);
 	}
-	(void) close(fd);
 
 	/*
 	 * Set the fd back to -1 so that if an error occurs we don't
