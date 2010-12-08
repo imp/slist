@@ -1,6 +1,16 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 8
+
+o Allow setting the iSCSI target name (-n/--iqn) instead of generating
+  default iqn.1986-03.com.sun:02:<UUID>
+o Allow setting CHAP secrets from command line, rather than entering them
+  interactively
+o Provide option (-x/--skip-bs-validation) that disables all the backing
+  store checks during the target creation
+
+
 Version 7
 
 o Allow setting maxrecv, TPGT and ACL during target creation

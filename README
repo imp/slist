@@ -1,1 +1,2 @@
 SLIST is a backport of OpenSolaris legacy iSCSI target to Solaris 10.
+It also extends the original package with many new features and bug fixes.
