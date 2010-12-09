@@ -1762,8 +1762,11 @@ remove_target_common(char *name, int lun_num, Boolean_t replace, char **msg)
 	/*
 	 * Not much we can do here if we fail to updated the config.
 	 */
-	if (mgmt_config_save2scf() == False)
-		syslog(LOG_ERR, "Failed to update target configuration!");
+	if (replace == False) {
+		if (mgmt_config_save2scf() == False)
+			syslog(LOG_ERR,
+			    "Failed to update target configuration!");
+	}
 
 error:
 	if (iname != NULL)

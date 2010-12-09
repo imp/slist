@@ -410,12 +410,6 @@ create_target(tgt_node_t *x)
 					goto error;
 
 				iscsi_inventory_change(node_name);
-				if (mgmt_config_save2scf() == False) {
-					xml_rtn_msg(&msg, ERR_INTERNAL_ERROR);
-					goto error;
-				}
-
-				;
 			} else {
 				xml_rtn_msg(&msg, ERR_LUN_EXISTS);
 				goto error;
