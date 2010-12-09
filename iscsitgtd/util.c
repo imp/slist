@@ -1524,7 +1524,7 @@ thick_provo_start(void *v)
 		    tp->targ_name, tp->lun);
 		syslog(LOG_ERR, "Failed to initialize %s, LU%d", tp->targ_name,
 		    tp->lun);
-		remove_target_common(tp->targ_name, tp->lun, &err);
+		remove_target_common(tp->targ_name, tp->lun, False, &err);
 		if (err != NULL) {
 
 			/*
@@ -1621,10 +1621,13 @@ thick_provo_chk_thr(char *targ, int lun)
  * | target code and when a write failure occurs during initialization.
  * | It will handle being given either the local target name or the full
  * | IQN name of the target.
+ * | Argumrnt 'replace' signals that removal is only to replace the LU
+ * | with a new one immediately. So even if that is last LU (LUN 0) nothing
+ * | special is to be done.
  * []----
  */
 void
-remove_target_common(char *name, int lun_num, char **msg)
+remove_target_common(char *name, int lun_num, Boolean_t replace, char **msg)
 {
 	tgt_node_t	*targ			= NULL;
 	tgt_node_t	*list, *lun, *c;
@@ -1673,7 +1676,7 @@ remove_target_common(char *name, int lun_num, char **msg)
 	if ((list = tgt_node_next(targ, XML_ELEMENT_LUNLIST, NULL)) == NULL)
 		goto error;
 
-	if (lun_num == 0) {
+	if ((lun_num == 0) && (replace == False)) {
 
 		/*
 		 * LUN must be the last one removed, so check to
@@ -1728,12 +1731,12 @@ remove_target_common(char *name, int lun_num, char **msg)
 	(void) mgmt_param_remove(tname, lun_num);
 
 	/*
-	 * If the was LUN 0 then do to the previous check
+	 * If we are not replacing LUN 0 then due to the previous check
 	 * we know that no other files exist in the target
 	 * directory so the target information can be removed
 	 * along with the directory.
 	 */
-	if (lun_num == 0) {
+	if ((lun_num == 0) && (replace == False)) {
 		(void) snprintf(path, sizeof (path), "%s/%s", target_basedir,
 		    iname);
 		(void) rmdir(path);

@@ -92,7 +92,7 @@ Boolean_t strtoll_multiplier(char *str, uint64_t *sp);
 void thick_provo_stop(char *targ, int lun);
 void *thick_provo_start(void *v);
 Boolean_t thick_provo_chk_thr(char *targ, int lun);
-void remove_target_common(char *name, int lun, char **msg);
+void remove_target_common(char *name, int lun, Boolean_t replace, char **msg);
 char *get_local_name(char *iname);
 Boolean_t validate_xml(char *req);
 

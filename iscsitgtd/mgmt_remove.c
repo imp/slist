@@ -374,7 +374,8 @@ remove_target(tgt_node_t *x, ucred_t *cred)
 		logout_targ(prop);
 		thick_provo_stop(prop, lun_num);
 
-		remove_target_common(targ->x_value, lun_num, &msg);
+		/* replace = False -> just remove */
+		remove_target_common(targ->x_value, lun_num, False, &msg);
 		if (msg != NULL)
 			goto error;
 

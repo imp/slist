@@ -153,6 +153,8 @@ create_target(tgt_node_t *x)
 	int		lun		= 0; /* default to LUN 0 */
 	int		i;
 	Boolean_t	skip_back	= False;
+	Boolean_t	replace_lu	= False;
+	Boolean_t	duplicate_lu	= False;
 	tgt_node_t	*n, *c, *l;
 	err_code_t	code;
 
@@ -186,6 +188,7 @@ create_target(tgt_node_t *x)
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_RPM, &rpm);
 	(void) tgt_find_value_intchk(x, XML_ELEMENT_INTERLEAVE, &interleave);
 	(void) tgt_find_value_boolean(x, XML_ELEMENT_SKIP_BACK, &skip_back);
+	(void) tgt_find_value_boolean(x, XML_ELEMENT_REPLACE_LU, &replace_lu);
 
 	/*
 	 * We've got to have a name element or all bets are off.
@@ -390,6 +393,30 @@ create_target(tgt_node_t *x)
 		/* Check for duplicate LUN */
 		for (l = c->x_child; l; l = l->x_sibling) {
 			if (atoi(l->x_value) == lun) {
+				duplicate_lu = True;
+				break;
+			}
+		}
+
+		if (duplicate_lu == True) {
+			if (replace_lu == True) {
+				logout_targ(node_name);
+				thick_provo_stop(node_name, lun);
+
+				/* replace = True */
+				remove_target_common(node_name,
+				    lun, True, &msg);
+				if (msg != NULL)
+					goto error;
+
+				iscsi_inventory_change(node_name);
+				if (mgmt_config_save2scf() == False) {
+					xml_rtn_msg(&msg, ERR_INTERNAL_ERROR);
+					goto error;
+				}
+
+				;
+			} else {
 				xml_rtn_msg(&msg, ERR_LUN_EXISTS);
 				goto error;
 			}
