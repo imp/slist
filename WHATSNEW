@@ -1,6 +1,12 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 9
+
+o Provide option (-X/--replace-lun) to replace existing LU with the new one
+  when calling "iscsitadm create target"
+
+
 Version 8
 
 o Allow setting the iSCSI target name (-n/--iqn) instead of generating
