@@ -1,6 +1,12 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 10
+
+o Remove hardware accelerated CRC32 calculation. There are situation
+  when it produces wrong results.
+
+ 
 Version 9
 
 o Provide option (-X/--replace-lun) to replace existing LU with the new one
