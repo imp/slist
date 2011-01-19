@@ -1,6 +1,11 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 11
+
+o Make ALUA support compilation-time feature (ENABLE_ALUA).
+
+
 Version 10
 
 o Remove hardware accelerated CRC32 calculation. There are situation

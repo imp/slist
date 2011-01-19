@@ -251,6 +251,7 @@ spc_inquiry(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len)
 		 */
 		inq->inq_hisup		= 1;
 
+#if defined(ENABLE_ALUA)
 		/*
 		 * SPC-4, revision 1a, section 6.4.2
 		 * Stand INQUIRY Data
@@ -259,6 +260,7 @@ spc_inquiry(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len)
 		 * we defaults to symmertrical devices.
 		 */
 		inq->inq_tpgs		= 1;
+#endif
 
 		(void) snprintf(inq->inq_vid,
 		    sizeof (inq->inq_vid) + sizeof (inq->inq_pid) +

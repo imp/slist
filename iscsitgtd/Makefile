@@ -37,6 +37,11 @@ FEATURES	=
 # command arrives
 FEATURES	+= -DENABLE_EARLY_PGR_LOAD
 
+# ENABLE_ALUA - reports TPGS bits in INQUIRY as 01 to designate implicit ALUA
+# is supported. Beware, that some multipathing stacks (Windows, for example)
+# may have issues with this enabled.
+# FEATURE	+= -DENABLE_ALUA
+
 DSRC	= iscsi_provider.d
 DHEADER	= $(DSRC:%.d=%.h)
 DLIBSRCS = iscsi.d
