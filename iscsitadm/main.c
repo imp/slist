@@ -1059,11 +1059,7 @@ modifyVariable(int operandLen, char *operand[], cmdOptions_t *options,
 	}
 	tgt_buf_add_tag(&first_str, XML_ELEMENT_VARIABLE, Tag_End);
 	tgt_buf_add_tag(&first_str, "modify", Tag_End);
-
-	printf("%s\n", first_str);
-/*
 	node = tgt_door_call(first_str, 0);
-*/
 	free(first_str);
 	return (formatErrString(node));
 }
