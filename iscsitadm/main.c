@@ -1028,39 +1028,35 @@ modifyVariable(int operandLen, char *operand[], cmdOptions_t *options,
 
 	for (; optionList->optval; optionList++) {
 		switch (optionList->optval) {
-			case 'p': /* tpgt number */
-				tgt_buf_add(&first_str, XML_ELEMENT_TPGT,
-				    optionList->optarg);
-				break;
-			case 'l': /* acl */
-				tgt_buf_add(&first_str, XML_ELEMENT_ACL,
-				    optionList->optarg);
-				break;
-			case 'a': /* alias */
-				tgt_buf_add(&first_str, XML_ELEMENT_ALIAS,
-				    optionList->optarg);
-				break;
-			case 'm': /* max recv */
-				tgt_buf_add(&first_str, XML_ELEMENT_MAXRECV,
-				    optionList->optarg);
-				break;
-			case 'z': /* grow lun size */
-				tgt_buf_add(&first_str, XML_ELEMENT_SIZE,
-				    optionList->optarg);
-				break;
-			case 'u':
-				tgt_buf_add(&first_str, XML_ELEMENT_LUN,
-				    optionList->optarg);
-				break;
-			default:
-				(void) fprintf(stderr, "%s: %c: %s\n",
-				    cmdName, optionList->optval,
-				    gettext("unknown option"));
-				free(first_str);
-				return (1);
+		default:
+			(void) fprintf(stderr, "%s: %c: %s\n", cmdName,
+			    optionList->optval, gettext("unknown option"));
+			free(first_str);
+			return (1);
 		}
 	}
 
+	for (int i = 0; i < operandLen; i++) {
+		char	*val;
+
+		val = strchr(operand[i], '=');
+		if (val != NULL) {
+			*val++ = 0;
+		} else {
+			continue;
+		}
+		if (strcmp(operand[i], XML_ELEMENT_DBGLVL) == 0) {
+			tgt_buf_add(&first_str, XML_ELEMENT_DBGLVL, val);
+		} else if (strcmp(operand[i], XML_ELEMENT_LOGLVL) == 0) {
+			tgt_buf_add(&first_str, XML_ELEMENT_LOGLVL, val);
+		} else {
+			(void) fprintf(stderr, "%s: %c: %s\n", cmdName,
+			    operand[i], gettext("unknown variable"));
+			free(first_str);
+			return (1);
+			;
+		}
+	}
 	tgt_buf_add_tag(&first_str, XML_ELEMENT_VARIABLE, Tag_End);
 	tgt_buf_add_tag(&first_str, "modify", Tag_End);
 
