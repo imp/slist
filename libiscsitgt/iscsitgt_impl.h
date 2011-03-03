@@ -154,6 +154,7 @@ typedef enum {
 #define	XML_ELEMENT_PGR_BASEDIR	"PGR-basedir"
 #define	XML_ELEMENT_SKIP_BACK	"skip-backing-store"
 #define	XML_ELEMENT_REPLACE_LU	"replace-lu"
+#define	XML_ELEMENT_VARIABLE	"variable"
 
 typedef enum {
 	NodeFree,

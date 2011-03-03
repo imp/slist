@@ -53,6 +53,7 @@
 #define	ADMIN		OBJECT(2)
 #define	TPGT		OBJECT(3)
 #define	STATS		OBJECT(4)
+#define	VARIABLE	OBJECT(5)
 
 #define	VERSION_STRING_MAX_LEN	10
 #define	MAX_IPADDRESS_LEN	128
@@ -88,6 +89,7 @@ static int modifyTarget(int, char *[], cmdOptions_t *);
 static int modifyInitiator(int, char *[], cmdOptions_t *);
 static int modifyTpgt(int, char *[], cmdOptions_t *);
 static int modifyAdmin(int, char *[], cmdOptions_t *);
+static int modifyVariable(int, char *[], cmdOptions_t *, void *);
 static int deleteTarget(int, char *[], cmdOptions_t *);
 static int deleteInitiator(int, char *[], cmdOptions_t *);
 static int deleteTpgt(int, char *[], cmdOptions_t *);
@@ -171,6 +173,7 @@ object_t objects[] = {
 	{"admin", ADMIN},
 	{"tpgt", TPGT},
 	{"stats", STATS},
+	{"variable", VARIABLE},
 	{NULL, 0}
 };
 
@@ -219,6 +222,14 @@ objectRules_t objectRules[] = {
 	 * no subcmd can accept multiple operands
 	 */
 	{STATS, 0, SHOW, 0, CREATE|MODIFY|DELETE|LIST, 0, "local-target"},
+	/*
+	 * modify subcmd requires an operand
+	 * no subcmd optionally requires an operand
+	 * show subcmd requires no operand
+	 * create/delete/list are invalid for this operand
+	 * no subcmd can accept multiple operand
+ 	 */
+	{VARIABLE, MODIFY, 0, SHOW, 0, 0, "local-variable"},
 	{0, 0, 0, 0, 0, NULL}
 };
 
@@ -242,6 +253,8 @@ optionRules_t optionRules[] = {
 	{TPGT, LIST,   "v", B_FALSE, NULL},
 	{ADMIN, MODIFY, "dHCRrPSsef", B_TRUE, NULL},
 	{STATS, SHOW, "IN", B_FALSE, NULL},
+	{VARIABLE, MODIFY, "v", B_FALSE, NULL},
+	{VARIABLE, SHOW, "v", B_FALSE, NULL},
 };
 
 
@@ -306,17 +319,19 @@ showFunc(int operandLen, char *operand[], int object, cmdOptions_t *options,
 	int ret;
 
 	switch (object) {
-		case STATS:
-			ret = showStats(operandLen, operand, options);
-			break;
-		case ADMIN:
-			ret = showAdmin(operandLen, operand, options);
-			break;
-		default:
-			(void) fprintf(stderr, "%s: %s\n",
-			    cmdName, gettext("unknown object"));
-			ret = 1;
-			break;
+	case STATS:
+		ret = showStats(operandLen, operand, options);
+		break;
+	case ADMIN:
+		ret = showAdmin(operandLen, operand, options);
+		break;
+	case VARIABLE:
+		break;
+	default:
+		(void) fprintf(stderr, "%s: %s\n",
+		    cmdName, gettext("unknown object"));
+		ret = 1;
+		break;
 	}
 	return (ret);
 }
@@ -329,23 +344,26 @@ modifyFunc(int operandLen, char *operand[], int object, cmdOptions_t *options,
 	int ret;
 
 	switch (object) {
-		case TARGET:
-			ret = modifyTarget(operandLen, operand, options);
-			break;
-		case INITIATOR:
-			ret = modifyInitiator(operandLen, operand, options);
-			break;
-		case TPGT:
-			ret = modifyTpgt(operandLen, operand, options);
-			break;
-		case ADMIN:
-			ret = modifyAdmin(operandLen, operand, options);
-			break;
-		default:
-			(void) fprintf(stderr, "%s: %s\n",
-			    cmdName, gettext("unknown object"));
-			ret = 1;
-			break;
+	case TARGET:
+		ret = modifyTarget(operandLen, operand, options);
+		break;
+	case INITIATOR:
+		ret = modifyInitiator(operandLen, operand, options);
+		break;
+	case TPGT:
+		ret = modifyTpgt(operandLen, operand, options);
+		break;
+	case ADMIN:
+		ret = modifyAdmin(operandLen, operand, options);
+		break;
+	case VARIABLE:
+		ret = modifyVariable(operandLen, operand, options, addArgs);
+		break;
+	default:
+		(void) fprintf(stderr, "%s: %s\n",
+		    cmdName, gettext("unknown object"));
+		ret = 1;
+		break;
 	}
 	return (ret);
 }
@@ -989,6 +1007,67 @@ modifyAdmin(int operandLen, char *operand[], cmdOptions_t *options)
 	tgt_buf_add_tag(&first_str, "modify", Tag_End);
 
 	node = tgt_door_call(first_str, 0);
+	free(first_str);
+	return (formatErrString(node));
+}
+
+/*ARGSUSED*/
+static int
+modifyVariable(int operandLen, char *operand[], cmdOptions_t *options,
+    void *addArgs)
+{
+	char		*first_str	= NULL;
+	tgt_node_t	*node;
+	cmdOptions_t	*optionList	= options;
+
+	if (operand == NULL)
+		return (1);
+
+	tgt_buf_add_tag(&first_str, "modify", Tag_Start);
+	tgt_buf_add_tag(&first_str, XML_ELEMENT_VARIABLE, Tag_Start);
+
+	for (; optionList->optval; optionList++) {
+		switch (optionList->optval) {
+			case 'p': /* tpgt number */
+				tgt_buf_add(&first_str, XML_ELEMENT_TPGT,
+				    optionList->optarg);
+				break;
+			case 'l': /* acl */
+				tgt_buf_add(&first_str, XML_ELEMENT_ACL,
+				    optionList->optarg);
+				break;
+			case 'a': /* alias */
+				tgt_buf_add(&first_str, XML_ELEMENT_ALIAS,
+				    optionList->optarg);
+				break;
+			case 'm': /* max recv */
+				tgt_buf_add(&first_str, XML_ELEMENT_MAXRECV,
+				    optionList->optarg);
+				break;
+			case 'z': /* grow lun size */
+				tgt_buf_add(&first_str, XML_ELEMENT_SIZE,
+				    optionList->optarg);
+				break;
+			case 'u':
+				tgt_buf_add(&first_str, XML_ELEMENT_LUN,
+				    optionList->optarg);
+				break;
+			default:
+				(void) fprintf(stderr, "%s: %c: %s\n",
+				    cmdName, optionList->optval,
+				    gettext("unknown option"));
+				free(first_str);
+				return (1);
+		}
+	}
+
+	tgt_buf_add_tag(&first_str, XML_ELEMENT_VARIABLE, Tag_End);
+	tgt_buf_add_tag(&first_str, "modify", Tag_End);
+
+	printf("%s\n", first_str);
+/*
+	node = tgt_door_call(first_str, 0);
+*/
 	free(first_str);
 	return (formatErrString(node));
 }
