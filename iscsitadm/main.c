@@ -1011,6 +1011,10 @@ modifyAdmin(int operandLen, char *operand[], cmdOptions_t *options)
 	return (formatErrString(node));
 }
 
+/*
+ * "modify variable" does not emit "modify" request, but rather special
+ * "variable" request, which iscsitgtd can handle
+ */
 /*ARGSUSED*/
 static int
 modifyVariable(int operandLen, char *operand[], cmdOptions_t *options,
@@ -1023,7 +1027,6 @@ modifyVariable(int operandLen, char *operand[], cmdOptions_t *options,
 	if (operand == NULL)
 		return (1);
 
-	tgt_buf_add_tag(&first_str, "modify", Tag_Start);
 	tgt_buf_add_tag(&first_str, XML_ELEMENT_VARIABLE, Tag_Start);
 
 	for (; optionList->optval; optionList++) {
@@ -1058,7 +1061,6 @@ modifyVariable(int operandLen, char *operand[], cmdOptions_t *options,
 		}
 	}
 	tgt_buf_add_tag(&first_str, XML_ELEMENT_VARIABLE, Tag_End);
-	tgt_buf_add_tag(&first_str, "modify", Tag_End);
 	node = tgt_door_call(first_str, 0);
 	free(first_str);
 	return (formatErrString(node));
