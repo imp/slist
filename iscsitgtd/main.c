@@ -135,7 +135,7 @@ admin_table_t admin_prop_list[] = {
  */
 var_table_t var_table[] = {
 	{ "dbg_lvl", &dbg_lvl },
-	{ "qlog_lvl", &qlog_lvl },
+	{ "qlog-lvl", &qlog_lvl },
 	/* ---- End of Table marker ---- */
 	{ NULL, 0 }
 };
@@ -376,7 +376,7 @@ variable_handler(tgt_node_t *x, target_queue_t *reply, target_queue_t *mgmt,
 		for (v = var_table; v->v_name; v++) {
 			if (strcmp(c->x_name, v->v_name) == 0) {
 				*v->v_value = strtol(c->x_value, NULL, 0);
-				if (strcmp(v->v_name, "qlog_lvl") == 0)
+				if (strcmp(v->v_name, "qlog-lvl") == 0)
 					queue_log(True);
 				xml_rtn_msg(&reply_buf, ERR_SUCCESS);
 				break;
