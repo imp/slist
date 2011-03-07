@@ -32,6 +32,9 @@ PROG	= iscsitgtd
 # Conditional features
 FEATURES	=
 
+# FULL_DEBUG - enables verbose debug messages to be send to debug log
+# FEATURES	+= -DFULL_DEBUG
+
 # ENABLE_EARLY_PGR_LOAD - allows iscsitgtd to load the PGR data as soon as
 # the I_T_L nexus is created, rather than delay it until the first SCSI
 # command arrives
