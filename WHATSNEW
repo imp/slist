@@ -1,6 +1,12 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 12
+
+o Enable changing the internal logging faciltiy at runtime via
+  iscsitadm modify variable varname=value
+
+
 Version 11
 
 o Make ALUA support compilation-time feature (ENABLE_ALUA).

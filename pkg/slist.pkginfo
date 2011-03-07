@@ -28,7 +28,7 @@ CATEGORY="system"
 BASEDIR=/
 CLASSES="manifest none rbac"
 DESC="Solaris Legacy iSCSI Target"
-VERSION="11,REV=2011.01.19"
+VERSION="12,REV=2011.03.06"
 VENDOR="Grigale Ltd."
 HOTLINE="Please contact your local service provider"
 EMAIL="support@grigale.com"
