@@ -352,7 +352,12 @@ queue_str(target_queue_t *q, uint32_t lvl, msg_type_t type, char *fmt)
 	(void) pthread_mutex_lock(&q_mutex);
 	if ((qlog) && (qlog_lvl & lvl)) {
 		(void) ctime_r(&tval, debug, sizeof (debug));
-		(void) fprintf(qlog, "%s %s", debug, fmt);
+		/* Strip the trailing \n */
+		if (debug[strlen(debug)] == '\n') {
+			debug[strlen(debug)] = 0;
+		}
+		(void) fprintf(qlog, "%s %s%s", debug, fmt,
+		    (fmt[strlen(fmt)] != '\n') ? "\n" : "");
 		(void) fflush(qlog);
 	}
 	(void) pthread_mutex_unlock(&q_mutex);
