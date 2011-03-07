@@ -219,6 +219,8 @@ spc_inquiry(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len)
 	 * EVPD not set returns the standard inquiry data.
 	 */
 	if (evpd == 0) {
+		queue_prt(mgmtq, Q_STE_NONIO, "SPC%d INQUIRY Standard data "
+		    "request\n", lu->l_num, cdb[2]);
 		/*
 		 * Return whatever is the smallest amount between the
 		 * INQUIRY data or the amount requested.
@@ -618,6 +620,7 @@ spc_report_luns(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len)
 	int		lun_idx;
 	int		lun_val;
 	char		*str;
+	t10_lu_common_t	*lu			= cmd->c_lu->l_common;
 	tgt_node_t	*targ;
 	tgt_node_t	*lun_list;
 	tgt_node_t	*lun;
@@ -681,6 +684,9 @@ spc_report_luns(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len)
 
 	len_network = htonl(len);
 	bcopy(&len_network, buf, sizeof (len_network));
+
+	queue_prt(mgmtq, Q_STE_NONIO, "SPC%d REPORT_LUN expected_data=%d "
+	    "len=%d\n", lu->l_num, expected_data, len);
 
 	if (expected_data >= (len + SCSI_REPORTLUNS_ADDRESS_SIZE)) {
 
