@@ -1236,61 +1236,58 @@ setup_disk_backing(err_code_t *code, char *path, char *backing, tgt_node_t *n,
 	 * been done. If the backing store is null at this point everything
 	 * is okay so just return True.
 	 */
-	if ((skip_back == True) || (backing == NULL)) {
+	if (backing == NULL) {
 		return (True);
 	}
 
-	if (stat(backing, &s) == -1) {
-		if (*size == 0) {
-			*code = ERR_STAT_BACKING_FAILED;
+	if (skip_back == False) {
+		if (stat(backing, &s) == -1) {
+			if (*size == 0) {
+				*code = ERR_STAT_BACKING_FAILED;
+				return (False);
+			} else {
+				pn = tgt_node_alloc(XML_ELEMENT_DELETE_BACK,
+				    String, "true");
+				tgt_node_add(n, pn);
+				if (truncate(backing, *size) != 0) {
+					*code = ERR_FAILED_TO_CREATE_LU;
+					return (False);
+				}
+			}
+		} else if (*size != 0) {
+			*code = ERR_DISK_BACKING_SIZE_OR_FILE;
 			return (False);
-		} else {
-			pn = tgt_node_alloc(XML_ELEMENT_DELETE_BACK, String,
-			    "true");
-			tgt_node_add(n, pn);
-			if ((fd = open(backing, O_RDWR|O_CREAT|O_LARGEFILE,
-			    0600)) < 0) {
-				*code = ERR_FAILED_TO_CREATE_LU;
+		} else if (((s.st_mode & S_IFMT) == S_IFCHR) ||
+		    ((s.st_mode & S_IFMT) == S_IFBLK)) {
+			raw_name = getfullrawname(backing);
+			if ((raw_name == NULL) ||
+			    ((fd = open(raw_name, O_NONBLOCK|O_RDONLY)) < 0)) {
+				*code = ERR_DISK_BACKING_NOT_VALID_RAW;
+				(void) close(fd);
+				if (raw_name)
+					free(raw_name);
 				return (False);
 			}
-			(void) lseek(fd, *size - 512LL, 0);
-			bzero(buf, sizeof (buf));
-			(void) write(fd, buf, sizeof (buf));
-			(void) close(fd);
-		}
-	} else if (*size != 0) {
-		*code = ERR_DISK_BACKING_SIZE_OR_FILE;
-		return (False);
-	} else if (((s.st_mode & S_IFMT) == S_IFCHR) ||
-	    ((s.st_mode & S_IFMT) == S_IFBLK)) {
-		raw_name = getfullrawname(backing);
-		if ((raw_name == NULL) ||
-		    ((fd = open(raw_name, O_NONBLOCK|O_RDONLY)) < 0)) {
-			*code = ERR_DISK_BACKING_NOT_VALID_RAW;
-			(void) close(fd);
-			if (raw_name)
-				free(raw_name);
-			return (False);
-		}
-		free(raw_name);
-		if (readvtoc(fd, &extvtoc, &slice) == True) {
-			*size = extvtoc.v_part[slice].p_size * 512;
+			free(raw_name);
+			if (readvtoc(fd, &extvtoc, &slice) == True) {
+				*size = extvtoc.v_part[slice].p_size * 512;
 
-		} else if (readefi(fd, &efi, &slice) == True) {
-			*size = efi->efi_parts[slice].p_size * 512;
-			efi_free(efi);
+			} else if (readefi(fd, &efi, &slice) == True) {
+				*size = efi->efi_parts[slice].p_size * 512;
+				efi_free(efi);
+			} else {
+				*code = ERR_DISK_BACKING_NOT_VALID_RAW;
+				(void) close(fd);
+				return (False);
+			}
+			(void) close(fd);
+
+		} else if ((s.st_mode & S_IFMT) == S_IFREG) {
+			*size = s.st_size;
 		} else {
-			*code = ERR_DISK_BACKING_NOT_VALID_RAW;
-			(void) close(fd);
+			*code = ERR_DISK_BACKING_MUST_BE_REGULAR_FILE;
 			return (False);
 		}
-		(void) close(fd);
-
-	} else if ((s.st_mode & S_IFMT) == S_IFREG) {
-		*size = s.st_size;
-	} else {
-		*code = ERR_DISK_BACKING_MUST_BE_REGULAR_FILE;
-		return (False);
 	}
 
 	if ((symlink(backing, path) == -1) && (skip_back == False)) {
