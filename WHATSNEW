@@ -1,6 +1,12 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 13
+
+o When issuing "iscsitadm create target -x ..." do not skip backing storage
+  link creation, but ony bypass its validation.
+
+
 Version 12
 
 o Enable changing the internal logging faciltiy at runtime via
