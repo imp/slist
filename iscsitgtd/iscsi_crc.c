@@ -109,6 +109,13 @@ uint32_t iscsi_crc32c_table[256] =
 };
 
 /*
+ * -1 - uninitialized
+ * 0  - applicable
+ * others - NA
+ */
+static int iscsi_crc32_hd = -1;
+
+/*
  * iscsi_crc32c - Steps through buffer one byte at at time, calculates
  * reflected crc using table.
  */
@@ -120,6 +127,16 @@ iscsi_crc32c(void *address, unsigned long length)
 #ifdef	_BIG_ENDIAN
 	uint8_t byte0, byte1, byte2, byte3;
 #endif
+
+	if (iscsi_crc32_hd == -1) {
+		if (hd_crc32_avail((uint32_t *)iscsi_crc32c_table) == B_TRUE) {
+			iscsi_crc32_hd = 0;
+		} else {
+			iscsi_crc32_hd = 1;
+		}
+	}
+	if (iscsi_crc32_hd == 0)
+		return (HW_CRC32(buffer, length, crc));
 
 	while (length--) {
 		crc = iscsi_crc32c_table[(crc ^ *buffer++) & 0xFFL] ^
@@ -151,6 +168,16 @@ iscsi_crc32c_continued(void *address, unsigned long length, uint32_t crc)
 #ifdef	_BIG_ENDIAN
 	uint8_t byte0, byte1, byte2, byte3;
 #endif
+
+	if (iscsi_crc32_hd == -1) {
+		if (hd_crc32_avail((uint32_t *)iscsi_crc32c_table) == B_TRUE) {
+			iscsi_crc32_hd = 0;
+		} else {
+			iscsi_crc32_hd = 1;
+		}
+	}
+	if (iscsi_crc32_hd == 0)
+		return (HW_CRC32_CONT(buffer, length, crc));
 
 #ifdef	_BIG_ENDIAN
 	byte0 = (uint8_t)((crc >> 24) & 0xFF);
