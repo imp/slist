@@ -1,6 +1,12 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 15
+
+o Message "Underflow occurred" is ifdef'ed out as it is not an error
+  condition, but rather an informational message.
+
+
 Version 14
 
 o By default emit errors (messages tagged with level Q_*_ERRS) to
