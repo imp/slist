@@ -68,6 +68,8 @@ extern "C" {
 #define	Q_PR_NONIO	0x00020000
 #define	Q_PR_IO		0x00040000
 
+#define	Q_ALL_ERRS	(Q_CONN_ERRS | Q_SESS_ERRS | Q_STE_ERRS |\
+			 Q_GEN_ERRS | Q_PR_ERRS)
 /*
  * When used the queue request will be place at the head of the queue.
  */

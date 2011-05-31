@@ -84,7 +84,13 @@ queue_log(Boolean_t on)
 {
 	(void) pthread_mutex_lock(&q_mutex);
 	if ((on == True) && (qlog == NULL) && (qlog_lvl != 0)) {
-		qlog = fopen(target_log, "ab");
+		/*
+		 * Do not open file - the queue_str() will send
+		 * messages to the syslog() instead
+		 *
+		 * qlog = fopen(target_log, "ab");
+		 */
+		;
 	} else if ((on == False) && (qlog != NULL)) {
 		(void) fclose(qlog);
 		qlog = NULL;
@@ -350,6 +356,9 @@ queue_str(target_queue_t *q, uint32_t lvl, msg_type_t type, char *fmt)
 	char		debug[80];
 
 	(void) pthread_mutex_lock(&q_mutex);
+	if (((qlog_lvl == 0) && (Q_ALL_ERRS & lvl)) || (qlog_lvl & lvl)) {
+		syslog(LOG_DAEMON | LOG_ERR, fmt);
+	}
 	if ((qlog) && (qlog_lvl & lvl)) {
 		(void) ctime_r(&tval, debug, sizeof (debug));
 		/* Strip the trailing \n */
