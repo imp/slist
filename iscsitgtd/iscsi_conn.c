@@ -734,8 +734,10 @@ iscsi_conn_data_in(t10_cmd_t *t)
 				 * initiator expected and we're sending.
 				 */
 
+#ifdef FULL_DEBUG
 				queue_prt(c->c_mgmtq, Q_CONN_ERRS,
 				    "CON%x  Underflow occurred\n", c->c_num);
+#endif
 				send_datain_pdu(c, t, 0);
 				send_scsi_rsp(c, t);
 			}
