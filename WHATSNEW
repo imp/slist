@@ -1,6 +1,13 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 14
+
+o By default emit errors (messages tagged with level Q_*_ERRS) to
+  the syslog facility. When qlog-lvl is set to non-zero value
+  it overrides the default mask and takes precedence.
+
+
 Version 13
 
 o When issuing "iscsitadm create target -x ..." do not skip backing storage
