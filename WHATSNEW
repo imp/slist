@@ -1,6 +1,11 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 16
+
+o Fix unintialized pointer dereference in msg_lu_capacity_change handling
+
+
 Version 15
 
 o Message "Underflow occurred" is ifdef'ed out as it is not an error
