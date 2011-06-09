@@ -2084,9 +2084,14 @@ lu_runner(void *v)
 			queue_prt(mgmtq, Q_STE_NONIO,
 			    "LU_%x  Capacity Change from 0x%llx to 0x%llx\n",
 			    lu->l_internal_num, lu->l_size, new_size);
+
+			itl = avl_first(&lu->l_all_open);
+			if (itl == NULL) {
+				/* Nothing to do if there are no active ITLs */
+				break;
+			}
 			if ((path = malloc(MAXPATHLEN)) == NULL)
 				break;
-
 			(void) snprintf(path, MAXPATHLEN, "%s/%s",
 			    target_basedir, itl->l_targ->s_targ_base);
 			(void) load_params(lu, path);
@@ -2094,7 +2099,6 @@ lu_runner(void *v)
 			(*sam_emul_table[lu->l_dtype].t_task_mgmt)(lu,
 			    CapacityChange);
 			(void) pthread_mutex_lock(&lu->l_common_mutex);
-			itl = avl_first(&lu->l_all_open);
 			while (itl != NULL) {
 				itl->l_status	= KEY_UNIT_ATTENTION;
 				itl->l_asc	= SPC_ASC_CAP_CHANGE;
