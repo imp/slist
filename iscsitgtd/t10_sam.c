@@ -2086,15 +2086,13 @@ lu_runner(void *v)
 			    lu->l_internal_num, lu->l_size, new_size);
 
 			itl = avl_first(&lu->l_all_open);
-			if (itl == NULL) {
-				/* Nothing to do if there are no active ITLs */
-				break;
+
+			if ((path = malloc(MAXPATHLEN)) != NULL) {
+				(void) snprintf(path, MAXPATHLEN, "%s/%s",
+				    target_basedir,
+				    (itl) ? itl->l_targ->s_targ_base : "");
+				(void) load_params(lu, path);
 			}
-			if ((path = malloc(MAXPATHLEN)) == NULL)
-				break;
-			(void) snprintf(path, MAXPATHLEN, "%s/%s",
-			    target_basedir, itl->l_targ->s_targ_base);
-			(void) load_params(lu, path);
 			free(path);
 			(*sam_emul_table[lu->l_dtype].t_task_mgmt)(lu,
 			    CapacityChange);
