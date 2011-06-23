@@ -2287,7 +2287,7 @@ lu_update_size(t10_lu_common_t *lu, off64_t size)
 
 	snprintf(str, 32, "0x%llx", size);
 
-	lu->l_size = size;
+	lu->l_size = size * 512LL;
 
 	return (tgt_update_value_str(
 			tgt_node_find(lu->l_root, XML_ELEMENT_SIZE),
