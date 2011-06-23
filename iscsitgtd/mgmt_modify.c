@@ -329,7 +329,7 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 		}
 
 		/* ---- send updates to current initiators via ASC/ASCQ ---- */
-		iscsi_capacity_change(iscsi, lun);
+		iscsi_capacity_change(iscsi, lun, new_lu_size);
 
 		prop = NULL;
 		tgt_node_free(node);

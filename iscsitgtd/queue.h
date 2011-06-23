@@ -267,6 +267,11 @@ typedef struct name_request {
 	char		*nr_name;
 } name_request_t;
 
+typedef struct lu_cap_changed_request {
+	int		lun;
+	off64_t		lu_size;
+} lu_cap_changed_t;
+
 void queue_init();
 target_queue_t *queue_alloc();
 void queue_message_set(target_queue_t *, uint32_t lvl, msg_type_t, void *);

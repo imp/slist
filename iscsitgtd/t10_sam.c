@@ -83,6 +83,7 @@ static Boolean_t t10_lu_initialize(t10_lu_common_t *lu, char *basedir);
 static void *t10_aio_done(void *v);
 static Boolean_t lu_remove_cmds(msg_t *m, void *v);
 static void cmd_common_free(t10_cmd_t *cmd);
+static Boolean_t lu_update_size(t10_lu_common_t *lu, off64_t size);
 static Boolean_t load_params(t10_lu_common_t *lu, char *basedir);
 static Boolean_t fallocate(int fd, off64_t len);
 static t10_cmd_state_t t10_cmd_state_machine(t10_cmd_t *c, t10_cmd_event_t e);
@@ -898,8 +899,7 @@ t10_task_mgmt(t10_targ_handle_t t1, TaskOp_t op, int opt_lun, void *tag)
 		if ((lu = avl_find(&t->s_open_lu, (void *)&search, NULL)) !=
 		    NULL) {
 			queue_message_set(lu->l_common->l_from_transports,
-			    Q_HIGH, msg_lu_capacity_change,
-			    (void *)(uintptr_t)opt_lun);
+			    Q_HIGH, msg_lu_capacity_change, tag);
 			(void) pthread_mutex_unlock(&t->s_mutex);
 			return (True);
 		} else {
@@ -2080,11 +2080,15 @@ lu_runner(void *v)
 			break;
 
 		case msg_lu_capacity_change:
-			new_size = lseek(lu->l_fd, 0, SEEK_END);
+			new_size = ((lu_cap_changed_t *)m->msg_data)->lu_size;
+			free(m->msg_data);
+			m->msg_data = NULL;
 			queue_prt(mgmtq, Q_STE_NONIO,
 			    "LU_%x  Capacity Change from 0x%llx to 0x%llx\n",
 			    lu->l_internal_num, lu->l_size, new_size);
 
+			lu_update_size(lu, new_size);
+/*
 			itl = avl_first(&lu->l_all_open);
 			path = malloc(MAXPATHLEN);
 			if (path != NULL) {
@@ -2097,6 +2101,7 @@ lu_runner(void *v)
 				(void) load_params(lu, path);
 			}
 			free(path);
+*/
 			(*sam_emul_table[lu->l_dtype].t_task_mgmt)(lu,
 			    CapacityChange);
 			(void) pthread_mutex_lock(&lu->l_common_mutex);
@@ -2270,6 +2275,26 @@ lu_remove_cmds(msg_t *m, void *v)
 	}
 	return (False);
 }
+
+/*
+ * lu_update_size -- update the internal l_size parameter of the lu in hand
+ */
+static Boolean_t
+lu_update_size(t10_lu_common_t *lu, off64_t size)
+{
+	tgt_node_t	snode;
+	char	str[32];
+
+	snprintf(str, 32, "0x%llx", size);
+
+	lu->l_size = size;
+
+	return (tgt_update_value_str(
+			tgt_node_find(lu->l_root, XML_ELEMENT_SIZE),
+			XML_ELEMENT_SIZE, str));
+
+}
+
 
 /*
  * []----

@@ -207,7 +207,7 @@ void conn_state(iscsi_conn_t *c, iscsi_transition_t t);
 void send_iscsi_pkt(iscsi_conn_t *c, iscsi_hdr_t *h, char *opt_text);
 int read_retry(int fd, char *buf, int count);
 void iscsi_inventory_change(char *targ_name);
-void iscsi_capacity_change(char *targ_name, int lun);
+void iscsi_capacity_change(char *targ_name, int lun, off64_t lu_size);
 
 #ifdef __cplusplus
 }

@@ -1127,9 +1127,10 @@ queue_noop_in(iscsi_conn_t *c)
 }
 
 void
-iscsi_capacity_change(char *targ_name, int lun)
+iscsi_capacity_change(char *targ_name, int lun, off64_t lu_size)
 {
 	iscsi_conn_t		*conn;
+	lu_cap_changed_t	*msg;
 	extern pthread_mutex_t	port_mutex;
 
 	/*
@@ -1148,8 +1149,13 @@ iscsi_capacity_change(char *targ_name, int lun)
 		    (conn->c_sess->s_type == SessionNormal) &&
 		    (strcmp(conn->c_sess->s_t_name, targ_name) == 0)) {
 
-			queue_message_set(conn->c_sessq, 0,
-			    msg_lu_capacity_change, (void *)(uintptr_t)lun);
+			msg = malloc(sizeof (*msg));
+			if (msg != NULL) {
+				msg->lun = lun;
+				msg->lu_size = lu_size;
+				queue_message_set(conn->c_sessq, 0,
+				    msg_lu_capacity_change, msg);
+			}
 		}
 		(void) pthread_mutex_unlock(&conn->c_state_mutex);
 	}

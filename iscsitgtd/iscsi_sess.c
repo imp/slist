@@ -433,10 +433,10 @@ sess_process(void *v)
 			break;
 
 		case msg_lu_capacity_change:
-			lun = (int)(uintptr_t)m->msg_data;
+			lun = (lu_cap_changed_t *)(m->msg_data)->lun;
 			if (s->s_t10 != NULL)
 				(void) t10_task_mgmt(s->s_t10, CapacityChange,
-				    lun, 0);
+				    lun, m->msg_data);
 			break;
 
 		case msg_reset_targ:
