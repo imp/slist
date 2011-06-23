@@ -119,6 +119,8 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 	tgt_node_t	*c		= NULL;
 	tgt_node_t	*node		= NULL;
 	tgt_node_t	*tpgt		= NULL;
+	tgt_node_t	*ll		= NULL;
+	tgt_node_t	*n		= NULL;
 	Boolean_t	change_made	= False;
 	Boolean_t	bs_is_file	= False;
 	int		lun		= 0;
@@ -264,6 +266,20 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 			goto error;
 		}
 		tgt_node_replace(node, c, MatchName);
+
+		/* update incore copy as well */
+		ll = tgt_node_next(t, XML_ELEMENT_LUNLIST, NULL);
+		if (ll == NULL) {
+			goto error;
+		}
+		while ((n = tgt_node_next(ll, XML_ELEMENT_LUN, n)) != NULL) {
+			if (strtol(n->x_value, NULL, 0) == lun)
+				break;
+		}
+		if (n != NULL) {
+			tgt_node_replace(n, c, MatchName);
+		}
+
 		tgt_node_free(c);
 
 		/* ---- now update params file ---- */
