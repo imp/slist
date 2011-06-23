@@ -2086,8 +2086,8 @@ lu_runner(void *v)
 			    lu->l_internal_num, lu->l_size, new_size);
 
 			itl = avl_first(&lu->l_all_open);
-
-			if ((path = malloc(MAXPATHLEN)) != NULL) {
+			path = malloc(MAXPATHLEN);
+			if (path != NULL) {
 				(void) snprintf(path, MAXPATHLEN, "%s/%s",
 				    target_basedir,
 				    (itl) ? itl->l_targ->s_targ_base : "");
