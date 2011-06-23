@@ -2088,8 +2088,10 @@ lu_runner(void *v)
 			    lu->l_internal_num, lu->l_size, new_size);
 
 			lu_update_size(lu, new_size);
-/*
+
 			itl = avl_first(&lu->l_all_open);
+
+#ifdef I_THINK_WE_CAN_SAFELY_DROP_THIS_CODE
 			path = malloc(MAXPATHLEN);
 			if (path != NULL) {
 				(void) snprintf(path, MAXPATHLEN, "%s/%s",
@@ -2101,7 +2103,7 @@ lu_runner(void *v)
 				(void) load_params(lu, path);
 			}
 			free(path);
-*/
+#endif
 			(*sam_emul_table[lu->l_dtype].t_task_mgmt)(lu,
 			    CapacityChange);
 			(void) pthread_mutex_lock(&lu->l_common_mutex);
