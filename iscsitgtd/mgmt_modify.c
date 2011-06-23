@@ -146,6 +146,22 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 		xml_rtn_msg(&msg, ERR_TARG_NOT_FOUND);
 		goto error;
 	}
+	ll = tgt_node_next(t, XML_ELEMENT_LUNLIST, NULL);
+	if (ll == NULL) {
+		free(name);
+		xml_rtn_msg(&msg, ERR_LUN_NOT_FOUND);
+		goto error;
+	}
+	while ((n = tgt_node_next(ll, XML_ELEMENT_LUN, n)) != NULL) {
+		if (strtol(n->x_value, NULL, 0) == lun)
+			break;
+	}
+	if (n != NULL) {
+		free(name);
+		xml_rtn_msg(&msg, ERR_LUN_NOT_FOUND);
+		goto error;
+	}
+
 
 	if (tgt_find_attr_str(t, XML_ELEMENT_INCORE, &m) == True) {
 		if (strcmp(m, "true") == 0) {
@@ -266,20 +282,8 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 			goto error;
 		}
 		tgt_node_replace(node, c, MatchName);
-
-		/* update incore copy as well */
-		ll = tgt_node_next(t, XML_ELEMENT_LUNLIST, NULL);
-		if (ll == NULL) {
-			goto error;
-		}
-		while ((n = tgt_node_next(ll, XML_ELEMENT_LUN, n)) != NULL) {
-			if (strtol(n->x_value, NULL, 0) == lun)
-				break;
-		}
-		if (n != NULL) {
-			tgt_node_replace(n, c, MatchName);
-		}
-
+		/* update the in memory copy as well */
+		tgt_node_replace(n, c, MatchName);
 		tgt_node_free(c);
 
 		/* ---- now update params file ---- */
