@@ -162,7 +162,7 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 			break;
 	}
 */
-	if (n != NULL) {
+	if (n == NULL) {
 		free(name);
 		xml_rtn_msg(&msg, ERR_LUN_NOT_FOUND);
 		goto error;
