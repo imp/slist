@@ -290,6 +290,10 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 		}
 		tgt_node_replace(node, c, MatchName);
 		/* update the in memory copy as well */
+		if (tgt_find_value_str(n, XML_ELEMENT_SIZE, &prop) ==
+		    True) {
+			free(prop);
+		}
 		tgt_node_replace(n, c, MatchName);
 		tgt_node_free(c);
 
