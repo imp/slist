@@ -1,6 +1,11 @@
  Fixes and new features compared to iSCSI target distributed with OpenSolaris
  ============================================================================
 
+Version 18
+
+o Fixed online capacity growth. Hopelfuly for real.
+
+
 Version 17
 
 o Fix issue created by the previous fix when grown LUN didn't report the new
