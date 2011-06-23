@@ -2091,6 +2091,9 @@ lu_runner(void *v)
 				(void) snprintf(path, MAXPATHLEN, "%s/%s",
 				    target_basedir,
 				    (itl) ? itl->l_targ->s_targ_base : "");
+				queue_prt(mgmtq, Q_STE_NONIO,
+				    "LU_%x  Calling load_params(%s)\n",
+				    lu->l_internal_num, path);
 				(void) load_params(lu, path);
 			}
 			free(path);
@@ -2395,6 +2398,9 @@ load_params(t10_lu_common_t *lu, char *basedir)
 	(void) tgt_find_value_boolean(node, XML_ELEMENT_MMAP_LUN, &mmap_lun);
 	if (tgt_find_value_str(node, XML_ELEMENT_SIZE, &str) == True) {
 		lu->l_size = strtoll(str, NULL, 0) * 512LL;
+		queue_prt(mgmtq, Q_STE_NONIO,
+		    "LU_%d  New LU size is 0x%llx (%s)\n",
+		    lu->l_num, lu->l_size, str);
 		free(str);
 	} else
 		goto error;
