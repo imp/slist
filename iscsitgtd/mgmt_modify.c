@@ -146,22 +146,23 @@ modify_target(tgt_node_t *x, ucred_t *cred)
 		xml_rtn_msg(&msg, ERR_TARG_NOT_FOUND);
 		goto error;
 	}
-	ll = tgt_node_find(t, XML_ELEMENT_LUNLIST);
+	ll = tgt_node_next(t, XML_ELEMENT_LUNLIST, NULL);
 	if (ll == NULL) {
 		free(name);
 		xml_rtn_msg(&msg, ERR_LUN_NOT_FOUND);
 		goto error;
 	}
+/*
 	for (n = tgt_node_find(ll, XML_ELEMENT_LUN); n; n = tgt_node_next(ll, XML_ELEMENT_LUN, n)) {
 		if (strtol(n->x_value, NULL, 0) == lun)
 			break;
 	}
-/*
+*/
 	while ((n = tgt_node_next(ll, XML_ELEMENT_LUN, n)) != NULL) {
 		if (strtol(n->x_value, NULL, 0) == lun)
 			break;
 	}
-*/
+
 	if (n == NULL) {
 		free(name);
 		xml_rtn_msg(&msg, ERR_LUN_NOT_FOUND);
