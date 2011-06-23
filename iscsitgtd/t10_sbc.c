@@ -957,6 +957,8 @@ sbc_recap(t10_cmd_t *cmd, uint8_t *cdb, size_t cdb_len)
 
 	capacity = d->d_size;
 
+	queue_prt(mgmtq, Q_STE_IO, "Reporting capacity %lld\n", capacity);
+
 	len = sizeof (struct scsi_capacity);
 
 	/*
